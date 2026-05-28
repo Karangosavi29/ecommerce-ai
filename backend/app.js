@@ -22,11 +22,12 @@ app.use(cookieParser()) //to parse cookies
 
 
 import router from "./src/routes/auth.routes.js";
-
+import productRouter from "./src/routes/product.routes.js";
 
 //route declaration 
 // https://localhost:8000/api/v1/users/register
 app.use("/api/auth",router)
+app.use("/api/products", productRouter)
 
 
 
