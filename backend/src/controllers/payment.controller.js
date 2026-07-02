@@ -6,6 +6,7 @@ import  Cart  from "../models/cart.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { addPaymentSuccessJob } from "../queues/email.queue.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -86,6 +87,14 @@ const verifyPayment = asyncHandler(async (req, res) => {
   if (order.paymentStatus === "paid") {
     return res.status(200).json(new ApiResponse(200, order, "Payment already verified"));
   }
+
+  await addPaymentSuccessJob({
+    to:          req.user.email,
+    name:        req.user.name,
+    orderId:     order._id,
+    totalAmount: order.totalAmount,
+    paymentId:   razorpayPaymentId,
+  });
 
   order.paymentStatus = "paid";
   order.orderStatus = "confirmed";

@@ -4,6 +4,7 @@ import  Product  from "../models/product.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { addOrderConfirmationJob } from "../queues/email.queue.js";
 
 
 const buildWhatsAppMessage = (order, user) => {
@@ -108,6 +109,14 @@ const createOrder = asyncHandler(async (req, res) => {
     totalAmount,
     notes: notes || "",
   });
+
+  await addOrderConfirmationJob({
+    to:          req.user.email,
+    name:        req.user.name,
+    orderId:     order._id,
+    items:       order.items,
+    totalAmount: order.totalAmount,
+});
 
   //  WhatsApp Order
   if (orderType === "whatsapp") {

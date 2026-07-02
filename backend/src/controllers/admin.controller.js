@@ -4,6 +4,7 @@ import User from "../models/user.Model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { addOrderShippedJob } from "../queues/email.queue.js";
 
 // @desc    Dashboard analytics
 // @route   GET /api/admin/analytics
@@ -155,6 +156,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
     order.orderStatus = orderStatus;
     await order.save();
+
+    if (orderStatus === "shipped") {
+         await addOrderShippedJob({
+            to:      order.user.email,
+            name:    order.user.name,
+            orderId: order._id,
+        });
+    }
 
     return res
         .status(200)
