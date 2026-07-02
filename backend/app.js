@@ -8,6 +8,7 @@ import productRouter from "./src/routes/product.routes.js";
 import cartRouter from "./src/routes/cart.routes.js";
 import orderRouter from "./src/routes/order.routes.js";
 import paymentRouter from "./src/routes/payment.routes.js";
+import adminRouter from "./src/routes/admin.routes.js";
 
 const app = express();
 
@@ -17,24 +18,25 @@ app.use(cors({
   credentials: true,
 }));
 
-// ✅ Webhook MUST come before express.json()
+//  Webhook MUST come before express.json()
 // Razorpay sends raw body — if express.json() runs first, signature verification breaks
 app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
 
-// ✅ Body parsers
+//  Body parsers
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
-// ✅ Routes
+//  Routes
 app.use("/api/auth", router);
 app.use("/api/products", productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/payment", paymentRouter);
+app.use("/api/admin", adminRouter);
 
-// ✅ Global error handler
+//  Global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
