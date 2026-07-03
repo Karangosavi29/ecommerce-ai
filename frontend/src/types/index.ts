@@ -1,22 +1,27 @@
-export interface User {
-  id: string;
+export interface Product {
+  _id: string;
   name: string;
-  email: string;
-  role: "user" | "admin"; // ⚠️ adjust if your backend uses a different field/shape
+  description: string;
+  price: number;
+  images: string[]; // assumed array of image URLs
+  category: string;
+  stock: number;
+  ratings?: number;
   [key: string]: unknown;
 }
 
-export interface AuthCredentials {
-  email: string;
-  password: string;
+export interface ProductQueryParams {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
 }
 
-export interface RegisterPayload {
-  name: string;
-  email: string;
-  password: string;
+export interface ProductListResponse {
+  products: Product[];
+  total?: number;
+  page?: number;
+  totalPages?: number;
 }
 
-export interface ApiErrorResponse {
-  message?: string;
-}
+
