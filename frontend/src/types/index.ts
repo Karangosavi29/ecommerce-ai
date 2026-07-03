@@ -25,3 +25,33 @@ export interface ProductListResponse {
 }
 
 
+
+export interface ShippingAddress {
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export interface Order {
+  _id: string;
+  orderId?: string;
+  items: CartItem[];
+  totalAmount: number;
+  status: string;
+  shippingAddress: ShippingAddress;
+  paymentMethod: "razorpay" | "whatsapp";
+  createdAt: string;
+  [key: string]: unknown;
+}
+
+export interface RazorpayOrderResponse {
+  orderId: string; // Razorpay order_id
+  amount: number;
+  currency: string;
+  keyId?: string;
+}
+
