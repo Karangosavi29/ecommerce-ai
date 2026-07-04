@@ -17,7 +17,6 @@ export default function ProductDetail() {
   const isMutating = useCartStore((state) => state.isMutating);
 
   const [product, setProduct] = useState<Product | null>(null);
-  const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -30,7 +29,6 @@ export default function ProductDetail() {
     getProductById(id)
       .then((res) => {
         setProduct(res.data.product ?? res.data);
-        setActiveImage(0);
         setQuantity(1);
       })
       .catch(() => setNotFound(true))
@@ -60,40 +58,22 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.images?.length ? product.images : [];
   const outOfStock = product.stock <= 0;
 
   return (
     <div className="container py-8">
       <div className="grid gap-8 md:grid-cols-2">
-        {/* Images */}
-        <div className="flex flex-col gap-3">
-          <div className="aspect-square w-full overflow-hidden rounded-lg bg-muted">
-            {images.length > 0 ? (
-              <img
-                src={images[activeImage]}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                No image
-              </div>
-            )}
-          </div>
-          {images.length > 1 && (
-            <div className="flex gap-2">
-              {images.map((img, idx) => (
-                <button
-                  key={img + idx}
-                  onClick={() => setActiveImage(idx)}
-                  className={`h-16 w-16 overflow-hidden rounded-md border-2 ${
-                    idx === activeImage ? "border-primary" : "border-transparent"
-                  }`}
-                >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
+        {/* Image */}
+        <div className="aspect-square w-full overflow-hidden rounded-lg bg-muted">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+              No image
             </div>
           )}
         </div>

@@ -4,12 +4,12 @@ export const getCart = () => {
   return axiosClient.get("/cart");
 };
 
-export const addToCart = (productId: string, quantity: number) => {
-  return axiosClient.post("/cart/add", { productId, quantity });
+export const addToCart = (productId: string, qty: number) => {
+  return axiosClient.post("/cart/add", { productId, qty });
 };
 
-export const updateCartItem = (productId: string, quantity: number) => {
-  return axiosClient.put("/cart/update", { productId, quantity });
+export const updateCartItem = (productId: string, qty: number) => {
+  return axiosClient.put("/cart/update", { productId, qty });
 };
 
 export const removeCartItem = (productId: string) => {

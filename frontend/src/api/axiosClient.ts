@@ -72,5 +72,16 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+axiosClient.interceptors.response.use((response) => {
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "success" in response.data &&
+    "data" in response.data
+  ) {
+    response.data = response.data.data;
+  }
+  return response;
+});
 
 export default axiosClient;

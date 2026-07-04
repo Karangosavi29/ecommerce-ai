@@ -8,7 +8,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const image = Array.isArray(product.images) ? product.images[0] : undefined;
+  const image = product.imageUrl;
   const stock = typeof product.stock === "number" ? product.stock : Number(product.stock) || 0;
   const price = typeof product.price === "number" ? product.price : Number(product.price) || 0;
   const outOfStock = stock <= 0;

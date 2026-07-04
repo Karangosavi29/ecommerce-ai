@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 
 export const createPaymentOrder = (orderId: string) => {
-  return axiosClient.post("/payments/create-order", { orderId });
+  return axiosClient.post("/payment/create-razorpay-order", { orderId });
 };
 
 export const verifyPayment = (data: {
@@ -10,5 +10,5 @@ export const verifyPayment = (data: {
   razorpay_signature: string;
   orderId: string;
 }) => {
-  return axiosClient.post("/payments/verify", data);
+  return axiosClient.post("/payment/verify", data);
 };

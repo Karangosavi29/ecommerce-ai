@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import useCartStore from "@/store/cartStore";
 import { useAuth } from "@/hooks/useAuth";
-import { createOrder, createWhatsAppOrder } from "@/api/orders.api";
+import { createOrder } from "@/api/orders.api";
 import { createPaymentOrder, verifyPayment } from "@/api/payments.api";
 import { loadRazorpayScript } from "@/utils/helpers";
 import { Button } from "@/components/ui/button";
@@ -33,10 +33,7 @@ export default function Checkout() {
   const [isPaying, setIsPaying] = useState(false);
   const [isWhatsappSubmitting, setIsWhatsappSubmitting] = useState(false);
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   const handleChange = (field: keyof ShippingAddress, value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
@@ -65,16 +62,18 @@ export default function Checkout() {
 
     setIsPaying(true);
     try {
-      // 1. Create the order in our own DB first
+      // 1. Create the order — backend builds items from the server-side cart
       const orderRes = await createOrder({
         shippingAddress: address,
+        orderType: "online",
         paymentMethod: "razorpay",
       });
-      const order = orderRes.data.order ?? orderRes.data;
+      const { order, orderId } = orderRes.data;
+      const realOrderId = orderId ?? order?._id;
 
       // 2. Create a Razorpay order against it
-      const paymentRes = await createPaymentOrder(order._id ?? order.orderId);
-      const { orderId: razorpayOrderId, amount, currency, keyId } = paymentRes.data;
+      const paymentRes = await createPaymentOrder(realOrderId);
+      const { razorpayOrderId, amount, currency, keyId } = paymentRes.data;
 
       // 3. Load Razorpay checkout script
       const loaded = await loadRazorpayScript();
@@ -104,12 +103,14 @@ export default function Checkout() {
         }) => {
           try {
             await verifyPayment({
-              ...response,
-              orderId: order._id ?? order.orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+              orderId: realOrderId,
             });
             await clear();
             toast.success("Payment successful! Order placed.");
-            navigate(`/orders/${order._id ?? order.orderId}`, { replace: true });
+            navigate(`/orders/${realOrderId}`, { replace: true });
           } catch (err) {
             toast.error("Payment verification failed. Contact support if amount was deducted.");
           } finally {
@@ -138,8 +139,11 @@ export default function Checkout() {
 
     setIsWhatsappSubmitting(true);
     try {
-      const res = await createWhatsAppOrder({ shippingAddress: address });
-      const whatsappUrl = res.data.whatsappUrl ?? res.data.url;
+      const res = await createOrder({
+        shippingAddress: address,
+        orderType: "whatsapp",
+      });
+      const { whatsappUrl } = res.data;
 
       await clear();
       toast.success("Order created — continue on WhatsApp");
@@ -168,7 +172,6 @@ export default function Checkout() {
       <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        {/* Shipping form */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Shipping Address</CardTitle>
@@ -249,7 +252,6 @@ export default function Checkout() {
           </CardContent>
         </Card>
 
-        {/* Summary + payment options */}
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>Order Summary</CardTitle>
@@ -257,11 +259,11 @@ export default function Checkout() {
           <CardContent className="space-y-4">
             <div className="space-y-1">
               {items.map((item) => (
-                <div key={item.product._id} className="flex justify-between text-sm">
+                <div key={item.product} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {item.product.name} × {item.quantity}
+                    {item.name} × {item.qty}
                   </span>
-                  <span>₹{(item.product.price * item.quantity).toLocaleString("en-IN")}</span>
+                  <span>₹{(item.price * item.qty).toLocaleString("en-IN")}</span>
                 </div>
               ))}
             </div>
@@ -270,6 +272,9 @@ export default function Checkout() {
               <span>Total</span>
               <span>₹{subtotal.toLocaleString("en-IN")}</span>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Free shipping on orders ₹500+, otherwise ₹50 shipping applies.
+            </p>
 
             <div className="flex flex-col gap-2 pt-2">
               <Button onClick={handleRazorpayCheckout} disabled={isPaying} size="lg">

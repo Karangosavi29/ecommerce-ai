@@ -3,13 +3,11 @@ import type { ShippingAddress } from "@/types";
 
 export const createOrder = (data: {
   shippingAddress: ShippingAddress;
-  paymentMethod: string;
+  orderType: "online" | "whatsapp";
+  paymentMethod?: string; // required + must be "razorpay" when orderType is "online"
+  notes?: string;
 }) => {
-  return axiosClient.post("/orders", data);
-};
-
-export const createWhatsAppOrder = (data: { shippingAddress: ShippingAddress }) => {
-  return axiosClient.post("/orders/whatsapp", data);
+  return axiosClient.post("/orders/create", data);
 };
 
 export const getMyOrders = () => {

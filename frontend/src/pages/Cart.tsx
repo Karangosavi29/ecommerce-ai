@@ -19,10 +19,7 @@ export default function Cart() {
     fetchCart();
   }, [fetchCart]);
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   if (isLoading) return <Spinner fullScreen />;
 
@@ -52,87 +49,72 @@ export default function Cart() {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Items */}
         <div className="flex flex-col gap-4 lg:col-span-2">
-          {items.map((item, idx) => {
-            const image = item.product?.images?.[0];
-            const atMax = item.quantity >= (item.product?.stock ?? 0);
-            const itemKey = item.product?._id ?? `cart-item-${idx}`;
+          {items.map((item) => (
+            <div key={item.product} className="flex gap-4 rounded-lg border p-4">
+              <Link
+                to={`/products/${item.product}`}
+                className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted"
+              >
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                    No image
+                  </div>
+                )}
+              </Link>
 
-            return (
-              <div key={itemKey} className="flex gap-4 rounded-lg border p-4">
-                <Link
-                  to={`/products/${item.product._id}`}
-                  className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted"
-                >
-                  {image ? (
-                    <img
-                      src={image}
-                      alt={item.product.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      No image
-                    </div>
-                  )}
-                </Link>
+              <div className="flex flex-1 flex-col justify-between">
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    to={`/products/${item.product}`}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {item.name}
+                  </Link>
+                  <button
+                    onClick={() => removeItem(item.product)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remove item"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
 
-                <div className="flex flex-1 flex-col justify-between">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      to={`/products/${item.product._id}`}
-                      className="text-sm font-medium hover:underline"
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center rounded-md border">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={item.qty <= 1 || isMutating}
+                      onClick={() => updateItem(item.product, item.qty - 1)}
                     >
-                      {item.product.name}
-                    </Link>
-                    <button
-                      onClick={() => removeItem(item.product._id)}
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label="Remove item"
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-8 text-center text-sm">{item.qty}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isMutating}
+                      onClick={() => updateItem(item.product, item.qty + 1)}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <Plus className="h-3 w-3" />
+                    </Button>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center rounded-md border">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        disabled={item.quantity <= 1 || isMutating}
-                        onClick={() =>
-                          updateItem(item.product._id, item.quantity - 1)
-                        }
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        disabled={atMax || isMutating}
-                        onClick={() =>
-                          updateItem(item.product._id, item.quantity + 1)
-                        }
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    <p className="text-sm font-semibold">
-                      ₹
-                      {(item.product.price * item.quantity).toLocaleString(
-                        "en-IN"
-                      )}
-                    </p>
-                  </div>
+                  <p className="text-sm font-semibold">
+                    ₹{(item.price * item.qty).toLocaleString("en-IN")}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         {/* Summary */}
@@ -145,11 +127,7 @@ export default function Cart() {
           <p className="mt-1 text-xs text-muted-foreground">
             Shipping and taxes calculated at checkout.
           </p>
-          <Button
-            className="mt-4 w-full"
-            size="lg"
-            onClick={() => navigate("/checkout")}
-          >
+          <Button className="mt-4 w-full" size="lg" onClick={() => navigate("/checkout")}>
             Proceed to Checkout
           </Button>
         </div>
