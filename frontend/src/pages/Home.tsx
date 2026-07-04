@@ -19,7 +19,7 @@ export default function Home() {
   // Fetch categories once
   useEffect(() => {
     getCategories()
-      .then((res) => setCategories(res.data.data ?? res.data))
+      .then((res) => setCategories(res.data.categories ?? res.data))
       .catch(() => {
         // non-critical — filter bar just won't show categories
       });
@@ -32,7 +32,7 @@ export default function Home() {
         search: search || undefined,
         category: activeCategory !== "all" ? activeCategory : undefined,
       });
-      setProducts(res.data.data?.products ?? res.data.data ?? []);
+      setProducts(res.data.products ?? res.data ?? []);
     } catch (err) {
       toast.error("Failed to load products");
     } finally {

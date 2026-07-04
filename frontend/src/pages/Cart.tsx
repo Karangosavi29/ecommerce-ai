@@ -52,15 +52,13 @@ export default function Cart() {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Items */}
         <div className="flex flex-col gap-4 lg:col-span-2">
-          {items.map((item) => {
-            const image = item.product.images?.[0];
-            const atMax = item.quantity >= item.product.stock;
+          {items.map((item, idx) => {
+            const image = item.product?.images?.[0];
+            const atMax = item.quantity >= (item.product?.stock ?? 0);
+            const itemKey = item.product?._id ?? `cart-item-${idx}`;
 
             return (
-              <div
-                key={item.product._id}
-                className="flex gap-4 rounded-lg border p-4"
-              >
+              <div key={itemKey} className="flex gap-4 rounded-lg border p-4">
                 <Link
                   to={`/products/${item.product._id}`}
                   className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted"

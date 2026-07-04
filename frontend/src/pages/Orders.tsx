@@ -20,7 +20,11 @@ export default function Orders() {
 
   useEffect(() => {
     getMyOrders()
-      .then((res) => setOrders(res.data.orders ?? res.data))
+      .then((res) => {
+        const payload = res.data.orders ?? res.data.data?.orders ?? res.data.data ?? res.data;
+        setOrders(Array.isArray(payload) ? payload : []);
+      })
+      .catch(() => toast.error("Failed to load orders"))
       .finally(() => setIsLoading(false));
   }, []);
 

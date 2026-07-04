@@ -8,8 +8,10 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const image = product.images?.[0];
-  const outOfStock = product.stock <= 0;
+  const image = Array.isArray(product.images) ? product.images[0] : undefined;
+  const stock = typeof product.stock === "number" ? product.stock : Number(product.stock) || 0;
+  const price = typeof product.price === "number" ? product.price : Number(product.price) || 0;
+  const outOfStock = stock <= 0;
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -34,7 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <Link to={`/products/${product._id}`}>
           <h3 className="line-clamp-2 text-sm font-medium hover:underline">{product.name}</h3>
         </Link>
-        <p className="mt-1 text-base font-semibold">₹{product.price.toLocaleString("en-IN")}</p>
+        <p className="mt-1 text-base font-semibold">₹{price.toLocaleString("en-IN")}</p>
         {outOfStock && <p className="text-xs font-medium text-destructive">Out of stock</p>}
       </CardContent>
 
