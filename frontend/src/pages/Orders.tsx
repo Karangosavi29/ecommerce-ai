@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { getMyOrders } from "@/api/orders.api";
 import Spinner from "@/components/shared/Spinner";
 import { Button } from "@/components/ui/button";
@@ -51,34 +52,57 @@ export default function Orders() {
       <div className="flex flex-col gap-4">
         {orders.map((order) => {
           const orderId = order._id ?? order.orderId;
+          const statusKey = order.orderStatus?.toLowerCase();
           const statusClass =
-            statusColors[order.status?.toLowerCase()] ?? "bg-muted text-muted-foreground";
+            statusColors[statusKey] ?? "bg-muted text-muted-foreground";
+
+          // Thumbnail: show the first item's image, with a fallback for
+          // orders that somehow have no image (older test data, etc.)
+          const thumbnail = order.items?.[0]?.image;
+          const extraItemCount = (order.items?.length ?? 0) - 1;
 
           return (
             <Link key={orderId} to={`/orders/${orderId}`}>
               <Card className="transition-colors hover:bg-accent/50">
-                <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Order #{String(orderId).slice(-8).toUpperCase()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                      {" · "}
-                      {order.items?.length ?? 0} item
-                      {order.items?.length === 1 ? "" : "s"}
-                    </p>
+                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt={order.items?.[0]?.name ?? "Order item"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium">
+                        Order #{String(orderId).slice(-8).toUpperCase()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                        {" · "}
+                        {order.items?.length ?? 0} item
+                        {order.items?.length === 1 ? "" : "s"}
+                        {extraItemCount > 0 && ` (+${extraItemCount} more)`}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusClass}`}
                     >
-                      {order.status}
+                      {order.orderStatus}
                     </span>
                     <p className="text-sm font-semibold">
                       ₹{order.totalAmount?.toLocaleString("en-IN")}

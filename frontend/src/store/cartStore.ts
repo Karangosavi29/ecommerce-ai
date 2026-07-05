@@ -37,10 +37,10 @@ const useCartStore = create<CartState>((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await getCart();
-      const items: CartItem[] = res.data.items ?? res.data.cart?.items ?? [];
+      const items: CartItem[] = res.data.items ?? [];
       set({
         items,
-        itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        itemCount: items.reduce((sum, i) => sum + i.qty, 0),
       });
     } catch (err) {
       // Not logged in or empty cart — fail quietly, don't toast on background fetch
@@ -53,10 +53,10 @@ const useCartStore = create<CartState>((set, get) => ({
     set({ isMutating: true });
     try {
       const res = await addToCart(productId, quantity);
-      const items: CartItem[] = res.data.items ?? res.data.cart?.items ?? get().items;
+      const items: CartItem[] = res.data.items ?? get().items;
       set({
         items,
-        itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        itemCount: items.reduce((sum, i) => sum + i.qty, 0),
       });
       toast.success("Added to cart");
       return true;
@@ -71,10 +71,10 @@ const useCartStore = create<CartState>((set, get) => ({
   updateItem: async (productId, quantity) => {
     try {
       const res = await updateCartItem(productId, quantity);
-      const items: CartItem[] = res.data.items ?? res.data.cart?.items ?? get().items;
+      const items: CartItem[] = res.data.items ?? get().items;
       set({
         items,
-        itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        itemCount: items.reduce((sum, i) => sum + i.qty, 0),
       });
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to update cart"));
@@ -84,10 +84,10 @@ const useCartStore = create<CartState>((set, get) => ({
   removeItem: async (productId) => {
     try {
       const res = await removeCartItem(productId);
-      const items: CartItem[] = res.data.items ?? res.data.cart?.items ?? get().items;
+      const items: CartItem[] = res.data.items ?? get().items;
       set({
         items,
-        itemCount: items.reduce((sum, i) => sum + i.quantity, 0),
+        itemCount: items.reduce((sum, i) => sum + i.qty, 0),
       });
       toast.success("Item removed");
     } catch (err) {

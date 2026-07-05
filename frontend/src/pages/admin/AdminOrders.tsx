@@ -20,6 +20,42 @@ const STATUS_OPTIONS = [
   "cancelled",
 ];
 
+// Small helper so payment method + status render consistently.
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  razorpay: "Razorpay",
+  whatsapp_cod: "COD (WhatsApp)",
+};
+
+const PAYMENT_STATUS_STYLES: Record<string, string> = {
+  paid: "bg-green-100 text-green-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  refunded: "bg-gray-200 text-gray-700",
+};
+
+function PaymentBadge({ order }: { order: Order }) {
+  const methodLabel =
+    PAYMENT_METHOD_LABELS[order.paymentMethod] ?? order.paymentMethod;
+  const statusStyle =
+    PAYMENT_STATUS_STYLES[order.paymentStatus] ?? "bg-gray-100 text-gray-700";
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span
+        className={`inline-block w-fit rounded px-2 py-0.5 text-xs font-medium ${statusStyle}`}
+      >
+        {order.paymentStatus === "paid"
+          ? "Paid"
+          : order.paymentStatus === "refunded"
+          ? "Refunded"
+          : order.paymentMethod === "whatsapp_cod"
+          ? "Cash on Delivery"
+          : "Unpaid"}
+      </span>
+      <span className="text-xs text-muted-foreground">{methodLabel}</span>
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,11 +91,19 @@ export default function AdminOrders() {
   };
 
   const filteredOrders = useMemo(() => {
-    if (!search.trim()) return orders;
+    // Hide Razorpay orders where payment never completed — these are
+    // abandoned/failed checkout attempts (retries, closed modal, etc.),
+    // not real orders. COD/WhatsApp orders are unaffected since "pending"
+    // payment is expected for them until delivery.
+    const visibleOrders = orders.filter(
+      (order) => !(order.paymentMethod === "razorpay" && order.paymentStatus !== "paid")
+    );
+
+    if (!search.trim()) return visibleOrders;
 
     const query = search.toLowerCase();
 
-    return orders.filter((order) => {
+    return visibleOrders.filter((order) => {
       const orderId = String(order._id ?? order.orderId).toLowerCase();
       const customerName = (
         order.shippingAddress?.fullName ?? ""
@@ -95,6 +139,7 @@ export default function AdminOrders() {
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">Date</th>
               <th className="p-3 text-left font-medium">Total</th>
+              <th className="p-3 text-left font-medium">Payment</th>
               <th className="p-3 text-left font-medium">Status</th>
               <th className="p-3 text-left font-medium">Items</th>
             </tr>
@@ -121,6 +166,10 @@ export default function AdminOrders() {
 
           <td className="p-3">
             ₹{order.totalAmount.toLocaleString("en-IN")}
+          </td>
+
+          <td className="p-3">
+            <PaymentBadge order={order} />
           </td>
 
           <td className="p-3">
@@ -160,7 +209,7 @@ export default function AdminOrders() {
 
         {expandedOrder === orderId && (
           <tr className="bg-gray-50">
-            <td colSpan={6} className="p-4">
+            <td colSpan={7} className="p-4">
               <h3 className="mb-3 font-semibold">Products</h3>
 
               <table className="w-full border text-sm">

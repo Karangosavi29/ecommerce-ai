@@ -79,7 +79,7 @@ const createOrder = asyncHandler(async (req, res) => {
     name: item.product.name,
     price: item.product.price, // use live price, not cart snapshot
     quantity: item.qty,
-    image: item.product.images?.[0] || "",
+    image: item.product.imageUrl || "",
   }));
 
   const itemsTotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -95,28 +95,71 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new ApiError(400, "For online orders, paymentMethod must be 'razorpay'");
   }
 
-  //  Create order in DB 
-  const order = await Order.create({
-    user: req.user._id,
-    items: orderItems,
-    shippingAddress,
-    orderType,
-    orderStatus: "pending",
-    paymentStatus: "pending",
-    paymentMethod: resolvedPaymentMethod,
-    itemsTotal,
-    shippingCharge,
-    totalAmount,
-    notes: notes || "",
-  });
+  //  Dedup check (online orders only) 
+  // If the user retries checkout (failed payment, refresh, double-click, etc.)
+  // before completing payment, reuse their existing pending/unpaid order for
+  // the same cart instead of creating a fresh order document every time.
+  let order = null;
 
-  await addOrderConfirmationJob({
-    to:          req.user.email,
-    name:        req.user.name,
-    orderId:     order._id,
-    items:       order.items,
-    totalAmount: order.totalAmount,
-});
+  if (orderType === "online") {
+    const existingPendingOrder = await Order.findOne({
+      user: req.user._id,
+      orderType: "online",
+      paymentStatus: "pending",
+      orderStatus: "pending",
+    }).sort({ createdAt: -1 });
+
+    if (existingPendingOrder) {
+      const sameCart =
+        existingPendingOrder.items.length === orderItems.length &&
+        existingPendingOrder.items.every((existingItem) => {
+          const match = orderItems.find(
+            (newItem) => String(newItem.product) === String(existingItem.product)
+          );
+          return match && match.quantity === existingItem.quantity;
+        });
+
+      if (sameCart) {
+        existingPendingOrder.items = orderItems;
+        existingPendingOrder.shippingAddress = shippingAddress;
+        existingPendingOrder.paymentMethod = resolvedPaymentMethod;
+        existingPendingOrder.itemsTotal = itemsTotal;
+        existingPendingOrder.shippingCharge = shippingCharge;
+        existingPendingOrder.totalAmount = totalAmount;
+        existingPendingOrder.notes = notes || "";
+        // Clear any stale Razorpay order id from a prior failed attempt so
+        // payment.controller.js creates a fresh Razorpay order against this doc.
+        existingPendingOrder.razorpayOrderId = undefined;
+
+        order = await existingPendingOrder.save();
+      }
+    }
+  }
+
+  //  Create order in DB (first attempt, or cart changed since last pending order) 
+  if (!order) {
+    order = await Order.create({
+      user: req.user._id,
+      items: orderItems,
+      shippingAddress,
+      orderType,
+      orderStatus: "pending",
+      paymentStatus: "pending",
+      paymentMethod: resolvedPaymentMethod,
+      itemsTotal,
+      shippingCharge,
+      totalAmount,
+      notes: notes || "",
+    });
+
+    await addOrderConfirmationJob({
+      to:          req.user.email,
+      name:        req.user.name,
+      orderId:     order._id,
+      items:       order.items,
+      totalAmount: order.totalAmount,
+    });
+  }
 
   //  WhatsApp Order
   if (orderType === "whatsapp") {
