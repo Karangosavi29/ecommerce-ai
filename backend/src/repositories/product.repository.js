@@ -14,6 +14,21 @@ const updateById = (id, data) =>
 
 const distinctCategories = (filter) => Product.distinct("category", filter);
 
+
+const decrementStock = (productId, qty, session = null) =>
+    Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: qty } },
+        { $inc: { stock: -qty } },
+        { new: true, session }
+    );
+
+const incrementStock = (productId, qty, session = null) =>
+    Product.findOneAndUpdate(
+        { _id: productId },
+        { $inc: { stock: qty } },
+        { new: true, session }
+    );
+
 export default {
     findActiveByFilter,
     countByFilter,
@@ -21,4 +36,6 @@ export default {
     create,
     updateById,
     distinctCategories,
+    decrementStock,
+    incrementStock, // used for cancellation/refund restock
 };
