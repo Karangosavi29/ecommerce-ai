@@ -28,20 +28,9 @@ const cartSchema = new mongoose.Schema(
             unique:   true,
         },
         items: [cartItemSchema],
-        totalPrice: {
-            type:    Number,
-            default: 0,
-        },
     },
     { timestamps: true }
 );
 
-// Recalculate total before every save
-cartSchema.pre("save", async function () {
-  this.totalPrice = this.items.reduce(
-    (sum, item) => sum + item.price * item.qty, 
-    0
-  );
-});
 
 export default mongoose.model("Cart", cartSchema);
