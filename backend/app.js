@@ -13,14 +13,12 @@ import adminRouter from "./src/routes/admin.routes.js";
 const app = express();
 
 // ✅ CORS first
-app.use(cors({
-  origin: process.env.CORS_ORIGIN,
-  credentials: true,
-}));
-
-//  Webhook MUST come before express.json()
-// Razorpay sends raw body — if express.json() runs first, signature verification breaks
-app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+  }),
+);
 
 //  Body parsers
 app.use(express.json({ limit: "16kb" }));
@@ -39,11 +37,14 @@ app.use("/api/admin", adminRouter);
 //  Global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
+  const message = err.isOperational ? err.message : "Internal Server Error";
+
   return res.status(statusCode).json({
     success: false,
     statusCode,
     message,
+    ...(err.errors?.length ? { errors: err.errors } : {}),
+    ...(err.errorCode ? { errorCode: err.errorCode } : {}),
   });
 });
 

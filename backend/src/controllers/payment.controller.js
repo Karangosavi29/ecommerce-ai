@@ -1,178 +1,31 @@
-import crypto from "crypto";
-import Razorpay from "razorpay";
-import  {Order}  from "../models/order.model.js";
-import  Product  from "../models/product.model.js";
-import  Cart  from "../models/cart.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { addPaymentSuccessJob } from "../queues/email.queue.js";
+import { verifySignature } from "../utils/verifyRazorpaySignature.js";
+import paymentService from "../services/payment.service.js";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
-// POST /api/payment/create-razorpay-order
 const createRazorpayOrder = asyncHandler(async (req, res) => {
-  const { orderId } = req.body;
-
-  if (!orderId) {
-    throw new ApiError(400, "Order ID is required");
-  }
-
-  const order = await Order.findOne({ _id: orderId, user: req.user._id });
-  if (!order) {
-    throw new ApiError(404, "Order not found");
-  }
-
-  if (order.paymentStatus !== "pending") {
-    throw new ApiError(400, "Payment already processed for this order");
-  }
-
-  if (order.orderType !== "online") {
-    throw new ApiError(400, "This order is not eligible for online payment");
-  }
-
-  const razorpayOrder = await razorpay.orders.create({
-    amount: Math.round(order.totalAmount * 100),
-    currency: "INR",
-    receipt: `receipt_${order._id}`,
-    notes: {
-      orderId: order._id.toString(),
-      userId: req.user._id.toString(),
-    },
-  });
-
-  order.razorpayOrderId = razorpayOrder.id;
-  await order.save();
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        razorpayOrderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        orderId: order._id,
-        keyId: process.env.RAZORPAY_KEY_ID,
-      },
-      "Razorpay order created"
-    )
-  );
+    const data = await paymentService.createRazorpayOrder(req.body.orderId, req.user._id);
+    return res.status(200).json(new ApiResponse(200, data, "Razorpay order created"));
 });
 
-// POST /api/payment/verify
 const verifyPayment = asyncHandler(async (req, res) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = req.body;
-
-  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
-    throw new ApiError(400, "All payment fields are required");
-  }
-
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-    .digest("hex");
-
-  if (expectedSignature !== razorpaySignature) {
-    throw new ApiError(400, "Payment verification failed: Invalid signature");
-  }
-
-  const order = await Order.findOne({ _id: orderId, user: req.user._id });
-  if (!order) {
-    throw new ApiError(404, "Order not found");
-  }
-
-  if (order.paymentStatus === "paid") {
-    return res.status(200).json(new ApiResponse(200, order, "Payment already verified"));
-  }
-
-  await addPaymentSuccessJob({
-    to:          req.user.email,
-    name:        req.user.name,
-    orderId:     order._id,
-    totalAmount: order.totalAmount,
-    paymentId:   razorpayPaymentId,
-  });
-
-  order.paymentStatus = "paid";
-  order.orderStatus = "confirmed";
-  order.razorpayPaymentId = razorpayPaymentId;
-  order.razorpaySignature = razorpaySignature;
-  await order.save();
-
-  // Deduct stock only after payment confirmed
-  for (const item of order.items) {
-    await Product.findByIdAndUpdate(item.product, {
-      $inc: { stock: -item.quantity },
-    });
-  }
-
-  // Clear cart
-  await Cart.findOneAndUpdate(
-    { user: req.user._id },
-    { items: [], totalPrice: 0 }
-  );
-
-  return res.status(200).json(
-    new ApiResponse(200, { order }, "Payment successful! Order confirmed.")
-  );
+    const order = await paymentService.verifyPayment(req.body, req.user._id, req.user.email, req.user.name);
+    return res.status(200).json(new ApiResponse(200, { order }, "Payment successful! Order confirmed."));
 });
 
-// POST /api/payment/webhook
+// req.body is a raw Buffer here (rawBodyParser applied in routes, not express.json())
 const razorpayWebhook = asyncHandler(async (req, res) => {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  const signature = req.headers["x-razorpay-signature"];
+    const signature = req.headers["x-razorpay-signature"];
+    const isValid = verifySignature(req.body, signature, process.env.RAZORPAY_WEBHOOK_SECRET);
+    if (!isValid) throw new ApiError(400, "Invalid webhook signature");
 
-  const expectedSignature = crypto
-    .createHmac("sha256", webhookSecret)
-    .update(JSON.stringify(req.body))
-    .digest("hex");
+    const payload = JSON.parse(req.body.toString("utf8"));
+    const paymentEntity = payload.payload?.payment?.entity;
 
-  if (expectedSignature !== signature) {
-    throw new ApiError(400, "Invalid webhook signature");
-  }
+    await paymentService.handleWebhookEvent(payload.event, paymentEntity);
 
-  const event = req.body.event;
-  const paymentEntity = req.body.payload?.payment?.entity;
-
-  if (event === "payment.captured") {
-    const razorpayOrderId = paymentEntity.order_id;
-
-    const order = await Order.findOne({ razorpayOrderId });
-    if (!order) {
-      return res.status(200).json({ received: true });
-    }
-
-    if (order.paymentStatus !== "paid") {
-      order.paymentStatus = "paid";
-      order.orderStatus = "confirmed";
-      order.razorpayPaymentId = paymentEntity.id;
-      await order.save();
-
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stock: -item.quantity },
-        });
-      }
-
-      await Cart.findOneAndUpdate(
-        { user: order.user },
-        { items: [], totalPrice: 0 }
-      );
-    }
-  }
-
-  if (event === "payment.failed") {
-    const razorpayOrderId = paymentEntity.order_id;
-    await Order.findOneAndUpdate(
-      { razorpayOrderId },
-      { paymentStatus: "failed", orderStatus: "cancelled" }
-    );
-  }
-
-  return res.status(200).json({ received: true });
+    return res.status(200).json({ received: true });
 });
 
 export { createRazorpayOrder, verifyPayment, razorpayWebhook };
