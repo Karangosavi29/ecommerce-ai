@@ -1,35 +1,35 @@
 import { Router } from "express";
 import {
-    getAnalytics,
-    getAllOrders,
-    getOrderById,
-    updateOrderStatus,
-    getAllProducts,
-    getAllUsers,
-    getUserById,
-    getRevenueReport,
+  getAnalytics,
+  getRevenueReport,
+  getAllProducts,
+  getAllUsers,
+  getUserById,
 } from "../controllers/admin.controller.js";
 import { verifyJWT, adminOnly } from "../middleware/auth.middleware.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
+import {
+  validatePagination,
+  validateProductList,
+} from "../validators/admin.validator.js";
 
 const router = Router();
 
-// All admin routes — must be logged in AND admin
 router.use(verifyJWT, adminOnly);
 
 // Analytics
-router.get("/analytics",         getAnalytics);
+router.get("/analytics", getAnalytics);
 router.get("/analytics/revenue", getRevenueReport);
 
-// Orders
-router.get("/orders",                        getAllOrders);
-router.get("/orders/:orderId",               getOrderById);
-router.patch("/orders/:orderId/status",      updateOrderStatus);
+// Order management now lives ONLY at /api/orders/admin/all and
+// /api/orders/admin/:orderId/status — see order.routes.js from the Order module.
+// Removed here to eliminate the divergent/buggy duplicate implementation.
 
 // Products
-router.get("/products", getAllProducts);
+router.get("/products", validateProductList, getAllProducts);
 
 // Users
-router.get("/users",           getAllUsers);
-router.get("/users/:userId",   getUserById);
+router.get("/users", validatePagination, getAllUsers);
+router.get("/users/:userId", validateObjectId("userId"), getUserById);
 
 export default router;
