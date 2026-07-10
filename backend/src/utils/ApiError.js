@@ -1,26 +1,24 @@
-class ApiError extends Error{
+class ApiError extends Error {
     constructor(
         statusCode,
-        message="something went wrong",
-        errors=[],
-        stack=""
-        
-    ){
-        super(message)
-        this.statusCode =statusCode   // HTTP status code
-        this.data =null                 // Optional payload (currently null)
-        this.message=message             // Error message
-        this.success=false;              // Indicates API failure
-        this.errors=errors               // Array for field-specific errors
+        message = "Something went wrong",
+        errors = [],
+        errorCode = undefined,
+        stack = ""
+    ) {
+        super(message);
+        this.statusCode = statusCode; // HTTP status code
+        this.data = null;             // Optional payload (currently null)
+        this.success =false;         // Indicates API failure
+        this.errors = errors;         // Array for field-specific errors
+        this.errorCode = errorCode;   // Stable machine-readable code, e.g. "TOKEN_EXPIRED"
 
-
-        if(stack){
-            this.stack=stack
-        }else{
-            Error.captureStackTrace(this,this.constructor)
+        if (stack) {
+            this.stack = stack;
+        } else {
+            Error.captureStackTrace(this, this.constructor);
         }
     }
 }
 
-
-export {ApiError}
+export { ApiError };

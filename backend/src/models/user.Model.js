@@ -36,8 +36,9 @@ const userSchema = new mongoose.Schema(
             state:String,
             pincode:String,
         },
-        refreshToken: {
-            type: String 
+        refreshTokenHash: {
+            type: String,
+            select: false
         } 
     },{timestamps:true}
 )
@@ -85,4 +86,6 @@ userSchema.methods.generateRefreshToken =function(){
 }
 
 
-export default mongoose.model("User", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+export default User;
