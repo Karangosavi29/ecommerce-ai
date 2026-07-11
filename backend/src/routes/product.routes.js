@@ -42,3 +42,6 @@ router.put(
   updateProduct,
 );
 router.delete("/:id", verifyJWT, adminOnly, validateObjectId(), deleteProduct);
+
+
+export default router;

@@ -29,6 +29,9 @@ const incrementStock = (productId, qty, session = null) =>
         { new: true, session }
     );
 
+const findByFilterAdmin = (filter, { skip, limit }) =>
+    Product.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 });
+
 export default {
     findActiveByFilter,
     countByFilter,
@@ -38,4 +41,5 @@ export default {
     distinctCategories,
     decrementStock,
     incrementStock, // used for cancellation/refund restock
+    findByFilterAdmin,
 };

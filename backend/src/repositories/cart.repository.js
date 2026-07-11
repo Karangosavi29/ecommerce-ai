@@ -36,6 +36,9 @@ const removeItem = (userId, productId) =>
 const clearItems = (userId) =>
     Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } }, { new: true });
 
+const findByUserPopulated = (userId) =>
+    Cart.findOne({ user: userId }).populate("items.product", "name price stock imageUrl isActive");
+
 export default {
     findByUser,
     createForUser,
@@ -44,4 +47,5 @@ export default {
     setItemQty,
     removeItem,
     clearItems,
+    findByUserPopulated,
 };

@@ -16,7 +16,8 @@ const updateCartItemSchema = z.object({
 const validateBody = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-        return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+        const fieldErrors = result.error.errors.map((e) => ({ field: e.path.join("."), message: e.message }));
+        return next(new ApiError(400, "Validation failed", fieldErrors));
     }
     req.body = result.data;
     next();

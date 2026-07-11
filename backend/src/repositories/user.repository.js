@@ -21,6 +21,16 @@ const clearRefreshToken = (id) =>
 const updateProfile = (id, data) =>
     User.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).select("-password -refreshTokenHash");
 
+const findAllCustomers = ({ skip, limit }) =>
+    User.find({ role: "customer" })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select("-password -refreshTokenHash");
+
+const countCustomers = () => User.countDocuments({ role: "customer" });
+
+const findByIdAdmin = (id) => User.findById(id).select("-password -refreshTokenHash");
 
 export default {
     findByEmail,
@@ -32,4 +42,7 @@ export default {
     setRefreshTokenHash,
     clearRefreshToken,
     updateProfile,
+    findAllCustomers,
+    countCustomers,
+    findByIdAdmin,
 };

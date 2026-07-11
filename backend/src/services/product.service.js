@@ -2,6 +2,7 @@ import productRepository from "../repositories/product.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadOncloudinary } from "../config/cloudinary.js";
 import { getCache, setCache, deleteCache, deleteCachePattern } from "../utils/cache.js";
+import fs from "fs/promises";
 
 const PRODUCTS_TTL   = 300;
 const PRODUCT_TTL    = 600;
@@ -77,6 +78,7 @@ const createProduct = async ({ name, description, price, stock, category }, file
         if (!uploaded) throw new ApiError(500, "Image upload failed");
         productData.imageUrl     = uploaded.url;
         productData.cloudinaryId = uploaded.public_id;
+        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload
     }
 
     const product = await productRepository.create(productData);
@@ -94,8 +96,7 @@ const updateProduct = async (id, updateData, file) => {
         if (!uploaded) throw new ApiError(500, "Image upload failed");
         data.imageUrl     = uploaded.url;
         data.cloudinaryId = uploaded.public_id;
-        // TODO (P1): delete existing.cloudinaryId from Cloudinary here to avoid orphaned assets
-    }
+        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload    }
 
     const updated = await productRepository.updateById(id, data);
     await invalidateProductCaches(id);
