@@ -96,7 +96,8 @@ const updateProduct = async (id, updateData, file) => {
         if (!uploaded) throw new ApiError(500, "Image upload failed");
         data.imageUrl     = uploaded.url;
         data.cloudinaryId = uploaded.public_id;
-        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload    }
+        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload
+    }
 
     const updated = await productRepository.updateById(id, data);
     await invalidateProductCaches(id);

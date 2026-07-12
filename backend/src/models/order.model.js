@@ -6,10 +6,10 @@ const orderItemSchema = new mongoose.Schema({
     ref: "Product",
     required: true,
   },
-  name: { type: String, required: true },   
-  price: { type: Number, required: true },  
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
   quantity: { type: Number, required: true },
-  image: { type: String },                  
+  image: { type: String },
 });
 
 const shippingAddressSchema = new mongoose.Schema({
@@ -42,7 +42,14 @@ const orderSchema = new mongoose.Schema(
     // ORDER STATUS
     orderStatus: {
       type: String,
-      enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
       default: "pending",
     },
 
@@ -58,6 +65,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
+    couponCode: {
+      type: String,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
@@ -70,7 +85,7 @@ const orderSchema = new mongoose.Schema(
 
     notes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Order = mongoose.model("Order", orderSchema);

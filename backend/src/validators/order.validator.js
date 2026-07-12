@@ -17,6 +17,7 @@ const createOrderSchema = z.object({
     orderType: z.enum(["online", "whatsapp"]),
     paymentMethod: z.string().optional(),
     notes: z.string().max(500).optional(),
+    couponCode: z.string().trim().optional(),
 });
 
 const paginationSchema = z.object({
@@ -45,8 +46,12 @@ const validateBody = (schema) => (req, res, next) => {
 
 const validateQuery = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.query);
-    if (!result.success) return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
-    req.query = result.data;
+    if (!result.success) {
+        return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+    }
+    // req.query is getter-only in modern Express — mutate keys in place instead of reassigning
+    for (const key of Object.keys(req.query)) delete req.query[key];
+    Object.assign(req.query, result.data);
     next();
 };
 

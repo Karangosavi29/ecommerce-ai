@@ -7,8 +7,11 @@ const findPendingByUser = (userId) =>
 const findByIdAndUser = (orderId, userId) =>
     Order.findOne({ _id: orderId, user: userId }).select("-razorpaySignature");
 
-const findByIdAdmin = (orderId) => Order.findById(orderId);
-
+const findByIdAdmin = (orderId) =>
+    Order.findById(orderId)
+        .populate("user", "name email phone address")
+        .select("-razorpaySignature");
+        
 const create = (data, session = null) => Order.create([data], { session }).then((docs) => docs[0]);
 
 const updatePendingOrder = (orderId, data, session = null) =>

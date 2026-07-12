@@ -34,4 +34,9 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, order, "Order status updated"));
 });
 
-export { createOrder, getMyOrders, getOrderById, cancelOrder, getAllOrders, updateOrderStatus };
+const getOrderByIdAdmin = asyncHandler(async (req, res) => {
+    const order = await orderService.getOrderByIdAdmin(req.params.orderId);
+    return res.status(200).json(new ApiResponse(200, order, "Order fetched successfully"));
+});
+
+export { createOrder, getMyOrders, getOrderById, cancelOrder, getAllOrders, updateOrderStatus, getOrderByIdAdmin };

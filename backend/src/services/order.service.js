@@ -5,31 +5,48 @@ import productRepository from "../repositories/product.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { addOrderConfirmationJob } from "../queues/email.queue.js";
 import { ORDER_STATUS_TRANSITIONS, CANCELLABLE_STATUSES } from "../constants/orderStatus.js";
+import couponService from "./coupon.service.js";
 
 const buildWhatsAppMessage = (order) => {
-    const itemLines = order.items
-        .map((item) => `• ${item.name} x${item.quantity} = ₹${item.price * item.quantity}`)
-        .join("\n");
-    const addr = order.shippingAddress;
-    return `Hi, I want to place an order! 🛍️
+  const items = order.items
+    .map(
+      (item, index) =>
+        `${index + 1}. ${item.name}
+   Qty : ${item.quantity}
+   Price : ₹${item.price.toLocaleString()}
+   Total : ₹${(item.price * item.quantity).toLocaleString()}`
+    )
+    .join("\n\n");
 
-*Items:*
-${itemLines}
+  const a = order.shippingAddress;
 
-*Total: ₹${order.totalAmount}*
+  return `🛍️ *NEW ORDER*
 
-*Delivery Address:*
-${addr.fullName}
-${addr.addressLine1}${addr.addressLine2 ? ", " + addr.addressLine2 : ""}
-${addr.city}, ${addr.state} - ${addr.pincode}
-📞 ${addr.phone}
+━━━━━━━━━━━━━━━━
 
-*Order ID: ${order._id}*`;
+📦 *Products*
+
+${items}
+
+━━━━━━━━━━━━━━━━
+
+💳 *Payment Summary*
+Total Amount : *₹${order.totalAmount.toLocaleString()}*
+
+🚚 *Shipping Address*
+
+👤 ${a.fullName}
+🏠 ${a.addressLine1}${a.addressLine2 ? `, ${a.addressLine2}` : ""}
+📍 ${a.city}, ${a.state} - ${a.pincode}
+📞 ${a.phone}
+
+🆔 Order ID
+${order._id}
+
+━━━━━━━━━━━━━━━━
+Thank you for shopping with us ❤️`;
 };
 
-// Atomically decrement stock for every item in a transaction.
-// Throws ApiError(409) naming the first item that fails, and the transaction
-// rolls back all prior decrements in this same call automatically.
 const reserveStockForItems = async (items, session) => {
     for (const item of items) {
         const updated = await productRepository.decrementStock(item.product, item.quantity, session);
@@ -52,13 +69,13 @@ const buildOrderItemsFromCart = (cart) => {
     return cart.items.map((item) => ({
         product: item.product._id,
         name: item.product.name,
-        price: item.product.price, // live price, never cart snapshot — per earlier decision
+        price: item.product.price,
         quantity: item.qty,
         image: item.product.imageUrl || "",
     }));
 };
 
-const findOrCreatePendingOnlineOrder = async (userId, orderItems, shippingAddress, paymentMethod, notes, itemsTotal, shippingCharge, totalAmount) => {
+const findOrCreatePendingOnlineOrder = async (userId, orderItems, shippingAddress, paymentMethod, notes, itemsTotal, shippingCharge, totalAmount, couponCode, discountAmount) => {
     const existing = await orderRepository.findPendingByUser(userId);
 
     const sameCart = existing &&
@@ -70,27 +87,39 @@ const findOrCreatePendingOnlineOrder = async (userId, orderItems, shippingAddres
 
     if (sameCart) {
         return orderRepository.updatePendingOrder(existing._id, {
-            items: orderItems, shippingAddress, paymentMethod, itemsTotal, shippingCharge, totalAmount, notes: notes || "",
+            items: orderItems, shippingAddress, paymentMethod, itemsTotal, shippingCharge,
+            totalAmount, notes: notes || "", couponCode, discountAmount,
         });
     }
 
     const created = await orderRepository.create({
         user: userId, items: orderItems, shippingAddress, orderType: "online",
         orderStatus: "pending", paymentStatus: "pending", paymentMethod,
-        itemsTotal, shippingCharge, totalAmount, notes: notes || "",
+        itemsTotal, shippingCharge, totalAmount, notes: notes || "", couponCode, discountAmount,
     });
 
     return created;
 };
 
-const createOrder = async (userId, userEmail, userName, { shippingAddress, orderType, paymentMethod, notes }) => {
-    const cart = await cartRepository.findByUser(userId); // must be populated — see note below
+const createOrder = async (userId, userEmail, userName, { shippingAddress, orderType, paymentMethod, notes, couponCode }) => {
+    const cart = await cartRepository.findByUserPopulated(userId);
     if (!cart || cart.items.length === 0) throw new ApiError(400, "Cart is empty. Add items before placing an order");
 
     const orderItems = buildOrderItemsFromCart(cart);
     const itemsTotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const shippingCharge = itemsTotal >= 500 ? 0 : 50;
-    const totalAmount = itemsTotal + shippingCharge;
+
+    let discountAmount = 0;
+    let appliedCouponCode = null;
+
+    if (couponCode) {
+        const result = await couponService.applyCoupon(couponCode, userId, itemsTotal + shippingCharge);
+        discountAmount = result.discountAmount;
+        appliedCouponCode = result.couponCode;
+    }
+
+    // This is now the ONLY total used anywhere below — no separate stale `totalAmount`.
+    const totalAmount = itemsTotal + shippingCharge - discountAmount;
 
     let resolvedPaymentMethod = paymentMethod;
     if (orderType === "whatsapp") resolvedPaymentMethod = "whatsapp_cod";
@@ -99,7 +128,6 @@ const createOrder = async (userId, userEmail, userName, { shippingAddress, order
     }
 
     if (orderType === "whatsapp") {
-        // No later payment gate exists for this path — stock must commit NOW, atomically.
         const session = await mongoose.startSession();
         let order;
         try {
@@ -109,6 +137,7 @@ const createOrder = async (userId, userEmail, userName, { shippingAddress, order
                     user: userId, items: orderItems, shippingAddress, orderType: "whatsapp",
                     orderStatus: "confirmed", paymentStatus: "pending", paymentMethod: resolvedPaymentMethod,
                     itemsTotal, shippingCharge, totalAmount, notes: notes || "", whatsappMessageSent: true,
+                    couponCode: appliedCouponCode, discountAmount,
                 }, session);
                 order = created;
             });
@@ -123,9 +152,10 @@ const createOrder = async (userId, userEmail, userName, { shippingAddress, order
         return { order, whatsappUrl, isWhatsApp: true };
     }
 
-    // Online: stock is intentionally NOT touched here — payment.service.js decrements
-    // on confirmed webhook, using the same reserveStockForItems + transaction pattern.
-    const order = await findOrCreatePendingOnlineOrder(userId, orderItems, shippingAddress, resolvedPaymentMethod, notes, itemsTotal, shippingCharge, totalAmount);
+    const order = await findOrCreatePendingOnlineOrder(
+        userId, orderItems, shippingAddress, resolvedPaymentMethod, notes,
+        itemsTotal, shippingCharge, totalAmount, appliedCouponCode, discountAmount
+    );
 
     if (!order.wasExisting) {
         await addOrderConfirmationJob({ to: userEmail, name: userName, orderId: order._id, items: order.items, totalAmount: order.totalAmount });
@@ -155,13 +185,14 @@ const cancelOrder = async (orderId, userId) => {
     if (!CANCELLABLE_STATUSES.includes(order.orderStatus)) {
         throw new ApiError(400, `Order cannot be cancelled at '${order.orderStatus}' stage`);
     }
+    if (order.couponCode) {
+        await couponService.releaseCoupon(order.couponCode);
+    }
 
     const session = await mongoose.startSession();
     let updated;
     try {
         await session.withTransaction(async () => {
-            // Restock only if stock was actually committed (whatsapp orders commit at creation;
-            // online orders that reached "confirmed" would have committed at payment webhook).
             if (order.orderStatus === "confirmed" || order.orderType === "whatsapp") {
                 for (const item of order.items) {
                     await productRepository.incrementStock(item.product, item.quantity, session);
@@ -172,7 +203,6 @@ const cancelOrder = async (orderId, userId) => {
     } finally {
         session.endSession();
     }
-    // TODO (P1): if paymentStatus was "paid", enqueue an actual Razorpay refund job here
     return updated;
 };
 
@@ -200,4 +230,10 @@ const updateOrderStatus = async (orderId, newStatus) => {
     return orderRepository.updateStatus(orderId, newStatus);
 };
 
-export default { createOrder, getMyOrders, getOrderById, cancelOrder, getAllOrders, updateOrderStatus };
+const getOrderByIdAdmin = async (orderId) => {
+    const order = await orderRepository.findByIdAdmin(orderId);
+    if (!order) throw new ApiError(404, "Order not found");
+    return order;
+};
+
+export default { createOrder, getMyOrders, getOrderById, cancelOrder, getAllOrders, updateOrderStatus, getOrderByIdAdmin };
