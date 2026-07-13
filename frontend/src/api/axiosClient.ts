@@ -5,7 +5,7 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1",
   withCredentials: true, // send httpOnly cookies (accessToken/refreshToken)
   headers: {
     "Content-Type": "application/json",
