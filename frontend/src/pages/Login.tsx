@@ -1,17 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 
 interface FormErrors {
   email?: string;
@@ -54,14 +49,26 @@ export default function Login() {
   };
 
   return (
-    <div className="container flex min-h-[80vh] items-center justify-center py-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Log in to your GIRIElectronics account</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
+    <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
+      <AuthShowcasePanel />
+
+      <div className="flex items-center justify-center px-4 py-12 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-sm"
+        >
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Welcome back
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Log in to your GIRIElectronics account
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -78,9 +85,8 @@ export default function Login() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -89,21 +95,20 @@ export default function Login() {
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
-          </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
               {isSubmitting ? "Logging in..." : "Log in"}
             </Button>
+
             <p className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
-              <Link to="/register" className="font-medium text-primary hover:underline">
+              <Link to="/register" className="font-semibold text-primary hover:underline">
                 Sign up
               </Link>
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -1,17 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
+import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 
 interface FormErrors {
   name?: string;
@@ -60,14 +56,26 @@ export default function Register() {
   };
 
   return (
-    <div className="container flex min-h-[80vh] items-center justify-center py-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>Sign up for GIRIElectronics</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
+    <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
+      <AuthShowcasePanel />
+
+      <div className="flex items-center justify-center px-4 py-12 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-sm"
+        >
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Create an account
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Sign up for GIRIElectronics
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full name</Label>
               <Input
@@ -98,23 +106,22 @@ export default function Register() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
                 aria-invalid={!!errors.password}
               />
+              <PasswordStrengthMeter password={password} />
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -125,21 +132,20 @@ export default function Register() {
                 <p className="text-sm text-destructive">{errors.confirmPassword}</p>
               )}
             </div>
-          </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
               {isSubmitting ? "Creating account..." : "Sign up"}
             </Button>
+
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="font-medium text-primary hover:underline">
+              <Link to="/login" className="font-semibold text-primary hover:underline">
                 Log in
               </Link>
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </motion.div>
+      </div>
     </div>
   );
 }
