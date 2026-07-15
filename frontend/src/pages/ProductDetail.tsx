@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Minus, Plus } from "lucide-react";
-import { getProductById } from "@/api/products.api";
+import { Minus, Plus, Heart, ChevronRight, Star } from "lucide-react";
+import { getProductById, getProducts } from "@/api/products.api";
 import useCartStore from "@/store/cartStore";
+import useWishlistStore from "@/store/wishlistStore";
 import { useAuth } from "@/hooks/useAuth";
+import { recordProductView } from "@/hooks/useRecentlyViewed";
 import Spinner from "@/components/shared/Spinner";
 import { Button } from "@/components/ui/button";
+import { ImageGallery } from "@/components/product/ImageGallery";
+import { DeliveryEstimate } from "@/components/product/DeliveryEstimate";
+import { PaymentOptionsPanel } from "@/components/product/PaymentOptionsPanel";
+import { FinancingOptions } from "@/components/product/FinancingOptions";
+import { WhyBuyFromUs } from "@/components/product/WhyBuyFromUs";
+import { ReviewsSection } from "@/components/reviews/ReviewsSection";
+import { ProductRail } from "@/components/home/ProductRail";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export default function ProductDetail() {
@@ -21,6 +31,12 @@ export default function ProductDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [similar, setSimilar] = useState<Product[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+
+  const isWishlisted = useWishlistStore((s) => (product ? s.has(product._id) : false));
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
@@ -28,12 +44,26 @@ export default function ProductDetail() {
 
     getProductById(id)
       .then((res) => {
-        setProduct(res.data.product ?? res.data);
+        const p = res.data.product ?? res.data;
+        setProduct(p);
         setQuantity(1);
+        recordProductView(p._id);
       })
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!product?.category) return;
+    setSimilarLoading(true);
+    getProducts({ category: product.category })
+      .then((res) => {
+        const list: Product[] = res.data.products ?? res.data ?? [];
+        setSimilar(list.filter((p) => p._id !== product._id).slice(0, 8));
+      })
+      .catch(() => setSimilar([]))
+      .finally(() => setSimilarLoading(false));
+  }, [product?.category, product?._id]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -43,6 +73,11 @@ export default function ProductDetail() {
     }
     if (!product) return;
     await addItem(product._id, quantity);
+  };
+
+  const handleWishlist = () => {
+    if (!product) return;
+    toggleWishlist(product._id);
   };
 
   if (isLoading) return <Spinner fullScreen />;
@@ -59,47 +94,83 @@ export default function ProductDetail() {
   }
 
   const outOfStock = product.stock <= 0;
+  const hasRating = typeof product.ratings === "number" && product.ratings > 0;
 
   return (
-    <div className="container py-8">
+    <div className="container py-6 sm:py-8">
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Link to="/" className="hover:text-foreground">Home</Link>
+        <ChevronRight className="h-3 w-3" />
+        <Link to={`/?category=${product.category}`} className="capitalize hover:text-foreground">
+          {product.category}
+        </Link>
+        <ChevronRight className="h-3 w-3" />
+        <span className="line-clamp-1 text-foreground">{product.name}</span>
+      </nav>
+
       <div className="grid gap-8 md:grid-cols-2">
-        {/* Image */}
-        <div className="aspect-square w-full overflow-hidden rounded-lg bg-muted">
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-              No image
-            </div>
-          )}
-        </div>
+        {/* Gallery */}
+        <ImageGallery product={product} />
 
         {/* Details */}
         <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-wide text-muted-foreground">
-              {product.category}
-            </p>
-            <h1 className="text-2xl font-bold">{product.name}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                {product.category}
+              </p>
+              <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{product.name}</h1>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleWishlist}
+              aria-pressed={isWishlisted}
+              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card shadow-soft transition-transform hover:scale-105 active:scale-95"
+            >
+              <Heart
+                className={cn(
+                  "h-5 w-5 transition-colors",
+                  isWishlisted ? "fill-destructive text-destructive" : "text-muted-foreground"
+                )}
+              />
+            </button>
           </div>
 
-          <p className="text-3xl font-semibold">
+          {hasRating && (
+            <div className="flex items-center gap-1.5" aria-label={`Rated ${product.ratings} out of 5`}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={cn(
+                    "h-4 w-4",
+                    i < Math.round(product.ratings as number)
+                      ? "fill-warning text-warning"
+                      : "fill-muted text-muted"
+                  )}
+                />
+              ))}
+              <span className="text-sm font-medium text-muted-foreground">
+                {(product.ratings as number).toFixed(1)}
+              </span>
+            </div>
+          )}
+
+          <p className="text-3xl font-bold text-foreground">
             ₹{product.price.toLocaleString("en-IN")}
           </p>
 
-          <p className="whitespace-pre-line text-sm text-muted-foreground">
+          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
             {product.description}
           </p>
 
           <p className="text-sm">
             {outOfStock ? (
-              <span className="font-medium text-destructive">Out of stock</span>
+              <span className="font-semibold text-destructive">Out of stock</span>
             ) : (
-              <span className="font-medium text-green-600">
+              <span className="font-semibold text-success">
                 In stock ({product.stock} available)
               </span>
             )}
@@ -107,22 +178,26 @@ export default function ProductDetail() {
 
           {!outOfStock && (
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">Quantity</span>
-              <div className="flex items-center rounded-md border">
+              <span className="text-sm font-medium text-foreground">Quantity</span>
+              <div className="flex items-center rounded-md border border-border">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="w-8 text-center text-sm">{quantity}</span>
+                <span className="w-8 text-center text-sm font-medium" aria-live="polite">
+                  {quantity}
+                </span>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
                   disabled={quantity >= product.stock}
+                  aria-label="Increase quantity"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -138,8 +213,21 @@ export default function ProductDetail() {
           >
             {isMutating ? "Adding..." : outOfStock ? "Out of Stock" : "Add to Cart"}
           </Button>
+
+          <PaymentOptionsPanel productName={product.name} price={product.price} />
+          <DeliveryEstimate />
+          <WhyBuyFromUs />
+          <FinancingOptions />
         </div>
       </div>
+
+      <ReviewsSection productId={product._id} />
+
+      {(similar.length > 0 || similarLoading) && (
+        <div className="mt-10 border-t border-border">
+          <ProductRail title="Similar Products" products={similar} isLoading={similarLoading} />
+        </div>
+      )}
     </div>
   );
 }
