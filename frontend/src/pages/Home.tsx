@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { getProducts, getCategories } from "@/api/products.api";
@@ -6,9 +6,28 @@ import ProductCard from "@/components/shared/ProductCard";
 import Spinner from "@/components/shared/Spinner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { HeroBanner } from "@/components/home/HeroBanner";
+import { CategoryGrid } from "@/components/home/CategoryGrid";
+import { ProductRail } from "@/components/home/ProductRail";
+import { FlashSaleCountdown } from "@/components/home/FlashSaleCountdown";
+import { TopBrands } from "@/components/home/TopBrands";
+import { CustomerReviews } from "@/components/home/CustomerReviews";
+import { Newsletter } from "@/components/home/Newsletter";
+import { useRecentlyViewedIds } from "@/hooks/useRecentlyViewed";
 import type { Product } from "@/types";
 
 export default function Home() {
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    getProducts({})
+      .then((res) => setAllProducts(res.data.products ?? res.data ?? []))
+      .catch(() => {
+      })
+      .finally(() => setIsCatalogLoading(false));
+  }, []);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -16,7 +35,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch categories once
+  const shopGridRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     getCategories()
       .then((res) => setCategories(res.data.categories ?? res.data))
@@ -49,58 +69,156 @@ export default function Home() {
     setSearch(searchInput.trim());
   };
 
-  return (
-    <div className="container py-8">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-bold">Shop GIRIElectronics</h1>
+  const handleCategorySelect = (category: string) => {
+    setActiveCategory(category);
+    shopGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
-        <form onSubmit={handleSearchSubmit} className="flex w-full max-w-sm gap-2">
-          <Input
-            placeholder="Search products..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <Button type="submit" size="icon" variant="outline" aria-label="Search">
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
+  const featured = useMemo(() => allProducts.slice(0, 8), [allProducts]);
+
+  const newArrivals = useMemo(() => {
+    const withDates = allProducts.filter((p: any) => p.createdAt);
+    const sorted =
+      withDates.length > 0
+        ? [...withDates].sort(
+            (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        : [...allProducts].reverse(); // fallback: assume API returns oldest-first
+    return sorted.slice(0, 8);
+  }, [allProducts]);
+
+  const bestSellers = useMemo(() => {
+    return allProducts.slice(8, 16).length > 0 ? allProducts.slice(8, 16) : allProducts.slice(0, 8);
+  }, [allProducts]);
+
+  const flashSaleProducts = useMemo(() => allProducts.slice(0, 6), [allProducts]);
+
+  const recentlyViewedIds = useRecentlyViewedIds();
+  const recentlyViewed = useMemo(
+    () =>
+      recentlyViewedIds
+        .map((id) => allProducts.find((p) => p._id === id))
+        .filter((p): p is Product => Boolean(p)),
+    [recentlyViewedIds, allProducts]
+  );
+
+  return (
+    <div>
+      <HeroBanner />
+
+      <CategoryGrid
+        categories={categories}
+        activeCategory={activeCategory}
+        onSelect={handleCategorySelect}
+        isLoading={categories.length === 0 && isLoading}
+      />
+
+      <div className="border-t border-border" />
+
+      <ProductRail
+        eyebrow="Ends tonight"
+        title="Flash Sale"
+        subtitle="Today's picks — refreshed daily."
+        products={flashSaleProducts}
+        isLoading={isCatalogLoading}
+        headerAccessory={<FlashSaleCountdown />}
+        emptyMessage="No deals right now — check back soon."
+      />
+
+      <div className="border-t border-border bg-card/40">
+        <ProductRail
+          eyebrow="Handpicked"
+          title="Featured Products"
+          products={featured}
+          isLoading={isCatalogLoading}
+        />
       </div>
 
-      {categories.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={activeCategory === "all" ? "default" : "outline"}
-            onClick={() => setActiveCategory("all")}
-          >
-            All
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              size="sm"
-              variant={activeCategory === cat ? "default" : "outline"}
-              onClick={() => setActiveCategory(cat)}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
+      <TopBrands />
+
+      <ProductRail
+        eyebrow="Popular"
+        title="Best Sellers"
+        products={bestSellers}
+        isLoading={isCatalogLoading}
+      />
+
+      <div className="border-t border-border bg-card/40">
+        <ProductRail
+          eyebrow="Just in"
+          title="New Arrivals"
+          products={newArrivals}
+          isLoading={isCatalogLoading}
+        />
+      </div>
+
+      {recentlyViewed.length > 0 && (
+        <ProductRail eyebrow="Continue browsing" title="Recently Viewed" products={recentlyViewed} />
       )}
 
-      {isLoading ? (
-        <Spinner fullScreen />
-      ) : products.length === 0 ? (
-        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          No products found.
+      <CustomerReviews />
+
+      <section ref={shopGridRef} className="scroll-mt-20 border-t border-border py-10 sm:py-12">
+        <div className="container">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Shop All Products
+            </h2>
+
+            <form onSubmit={handleSearchSubmit} className="flex w-full max-w-sm gap-2">
+              <Input
+                placeholder="Search products..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                aria-label="Search products"
+              />
+              <Button type="submit" size="icon" variant="outline" aria-label="Search">
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+
+          {categories.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={activeCategory === "all" ? "default" : "outline"}
+                onClick={() => setActiveCategory("all")}
+                className="rounded-full"
+              >
+                All
+              </Button>
+              {categories.map((cat) => (
+                <Button
+                  key={cat}
+                  size="sm"
+                  variant={activeCategory === cat ? "default" : "outline"}
+                  onClick={() => setActiveCategory(cat)}
+                  className="rounded-full capitalize"
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {isLoading ? (
+            <Spinner fullScreen />
+          ) : products.length === 0 ? (
+            <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+              No products found.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product._id} product={product} />
-          ))}
-        </div>
-      )}
+      </section>
+
+      <Newsletter />
     </div>
   );
 }
