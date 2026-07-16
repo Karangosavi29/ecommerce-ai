@@ -1,22 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import toast from "react-hot-toast";
-import { getOrderById, cancelOrder } from "@/api/orders.api";
+import { Package, MapPin, CreditCard } from "lucide-react";
 import Spinner from "@/components/shared/Spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
+import { CancelOrderDialog } from "@/components/orders/CancelOrderDialog";
+import { getOrderById } from "@/api/orders.api";
 import type { Order } from "@/types";
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  processing: "bg-blue-100 text-blue-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-};
-
-// Matches backend's cancellableStatuses exactly
 const CANCELLABLE_STATUSES = ["pending", "confirmed"];
 
 export default function OrderDetail() {
@@ -25,8 +17,8 @@ export default function OrderDetail() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCancelling, setIsCancelling] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -37,20 +29,12 @@ export default function OrderDetail() {
       .finally(() => setIsLoading(false));
   }, [orderId]);
 
-  const handleCancel = async () => {
-    if (!orderId) return;
-    const confirmed = window.confirm("Are you sure you want to cancel this order?");
-    if (!confirmed) return;
-
-    setIsCancelling(true);
-    try {
-      const res = await cancelOrder(orderId);
-      setOrder(res.data.order ?? res.data);
-      toast.success("Order cancelled");
-    } catch (err) {
-      toast.error("Failed to cancel order");
-    } finally {
-      setIsCancelling(false);
+  const handleCancelled = (responseData?: unknown) => {
+    const data = responseData as { order?: Order } | Order | undefined;
+    if (data) {
+      setOrder((data as { order?: Order }).order ?? (data as Order));
+    } else {
+      setOrder((prev) => (prev ? { ...prev, orderStatus: "cancelled" } : prev));
     }
   };
 
@@ -69,14 +53,15 @@ export default function OrderDetail() {
 
   const displayId = String(order._id).slice(-8).toUpperCase();
   const statusKey = order.orderStatus?.toLowerCase();
-  const statusClass = statusColors[statusKey] ?? "bg-muted text-muted-foreground";
   const canCancel = CANCELLABLE_STATUSES.includes(statusKey);
 
   return (
     <div className="container py-8">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Order #{displayId}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Order #{displayId}
+          </h1>
           <p className="text-sm text-muted-foreground">
             Placed on{" "}
             {new Date(order.createdAt).toLocaleDateString("en-IN", {
@@ -86,23 +71,22 @@ export default function OrderDetail() {
             })}
           </p>
         </div>
-        <span className={`w-fit rounded-full px-3 py-1 text-sm font-medium capitalize ${statusClass}`}>
-          {order.orderStatus}
-        </span>
+        <OrderStatusBadge status={order.orderStatus} className="w-fit px-3 py-1.5 text-sm" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Items */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Items</CardTitle>
+        <Card className="shadow-soft lg:col-span-2">
+          <CardHeader className="flex flex-row items-center gap-2 space-y-0">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">Items</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {order.items?.map((item, idx) => (
               <div key={item.product ?? idx} className="flex gap-4">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                    <img src={item.image} alt={item.name} className="h-full w-full object-contain p-1" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                       No image
@@ -113,20 +97,20 @@ export default function OrderDetail() {
                   <div>
                     <Link
                       to={`/products/${item.product}`}
-                      className="text-sm font-medium hover:underline"
+                      className="text-sm font-semibold text-foreground hover:text-primary"
                     >
                       {item.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-semibold">
+                  <p className="text-sm font-bold text-foreground">
                     ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                   </p>
                 </div>
               </div>
             ))}
 
-            <div className="space-y-1 border-t pt-4 text-sm">
+            <div className="space-y-1 border-t border-border pt-4 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Items total</span>
                 <span>₹{order.itemsTotal?.toLocaleString("en-IN")}</span>
@@ -139,7 +123,7 @@ export default function OrderDetail() {
                     : `₹${order.shippingCharge?.toLocaleString("en-IN")}`}
                 </span>
               </div>
-              <div className="flex justify-between text-base font-semibold pt-1">
+              <div className="flex justify-between pt-1 text-base font-bold text-foreground">
                 <span>Total</span>
                 <span>₹{order.totalAmount?.toLocaleString("en-IN")}</span>
               </div>
@@ -149,12 +133,13 @@ export default function OrderDetail() {
 
         {/* Shipping + actions */}
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Address</CardTitle>
+          <Card className="shadow-soft">
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Shipping Address</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">{order.shippingAddress?.fullName}</p>
+              <p className="font-semibold text-foreground">{order.shippingAddress?.fullName}</p>
               <p>{order.shippingAddress?.phone}</p>
               <p>{order.shippingAddress?.addressLine1}</p>
               {order.shippingAddress?.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
@@ -165,27 +150,37 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment</CardTitle>
+          <Card className="shadow-soft">
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Payment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm text-muted-foreground">
               <p>
-                Method: <span className="capitalize text-foreground">{order.paymentMethod}</span>
+                Method: <span className="font-medium capitalize text-foreground">{order.paymentMethod}</span>
               </p>
               <p>
-                Status: <span className="capitalize text-foreground">{order.paymentStatus}</span>
+                Status: <span className="font-medium capitalize text-foreground">{order.paymentStatus}</span>
               </p>
             </CardContent>
           </Card>
 
           {canCancel && (
-            <Button variant="destructive" onClick={handleCancel} disabled={isCancelling}>
-              {isCancelling ? "Cancelling..." : "Cancel Order"}
+            <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
+              Cancel Order
             </Button>
           )}
         </div>
       </div>
+
+      {orderId && (
+        <CancelOrderDialog
+          orderId={orderId}
+          open={cancelDialogOpen}
+          onOpenChange={setCancelDialogOpen}
+          onCancelled={handleCancelled}
+        />
+      )}
     </div>
   );
 }
