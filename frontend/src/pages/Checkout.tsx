@@ -6,10 +6,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { createOrder } from "@/api/orders.api";
 import { createPaymentOrder, verifyPayment } from "@/api/payments.api";
 import { loadRazorpayScript } from "@/utils/helpers";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddressForm } from "@/components/checkout/AddressForm";
+import { OrderMethod } from "@/components/checkout/OrderMethod";
+import { CheckoutOrderSummary } from "@/components/checkout/CheckoutOrderSummary";
+import { OrderSuccessOverlay } from "@/components/checkout/OrderSuccessOverlay";
 import type { ShippingAddress } from "@/types";
 
 type FormErrors = Partial<Record<keyof ShippingAddress, string>>;
@@ -31,7 +31,10 @@ export default function Checkout() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isPaying, setIsPaying] = useState(false);
-  const [isWhatsappSubmitting, setIsWhatsappSubmitting] = useState(false);
+
+  // Purely presentational — does not change when navigate() fires below.
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
 
@@ -110,7 +113,11 @@ export default function Checkout() {
             });
             await clear();
             toast.success("Payment successful! Order placed.");
-            navigate(`/orders/${realOrderId}`, { replace: true });
+            setSuccessOrderId(realOrderId);
+            setShowSuccess(true);
+            window.setTimeout(() => {
+              navigate(`/orders/${realOrderId}`, { replace: true });
+            }, 1400);
           } catch (err) {
             toast.error("Payment verification failed. Contact support if amount was deducted.");
           } finally {
@@ -120,42 +127,13 @@ export default function Checkout() {
         modal: {
           ondismiss: () => setIsPaying(false),
         },
-        theme: { color: "#000000" },
+        theme: { color: "#2563EB" },
       });
 
       razorpay.open();
     } catch (err) {
       toast.error("Failed to start payment. Please try again.");
       setIsPaying(false);
-    }
-  };
-
-  const handleWhatsAppOrder = async () => {
-    if (!validate()) return;
-    if (items.length === 0) {
-      toast.error("Your cart is empty");
-      return;
-    }
-
-    setIsWhatsappSubmitting(true);
-    try {
-      const res = await createOrder({
-        shippingAddress: address,
-        orderType: "whatsapp",
-      });
-      const { whatsappUrl } = res.data;
-
-      await clear();
-      toast.success("Order created — continue on WhatsApp");
-
-      if (whatsappUrl) {
-        window.open(whatsappUrl, "_blank");
-      }
-      navigate("/orders", { replace: true });
-    } catch (err) {
-      toast.error("Failed to create WhatsApp order");
-    } finally {
-      setIsWhatsappSubmitting(false);
     }
   };
 
@@ -169,129 +147,18 @@ export default function Checkout() {
 
   return (
     <div className="container py-8">
-      <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Checkout</h1>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Shipping Address</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full name</Label>
-                <Input
-                  id="fullName"
-                  value={address.fullName}
-                  onChange={(e) => handleChange("fullName", e.target.value)}
-                />
-                {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={address.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  placeholder="10-digit mobile number"
-                />
-                {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-              </div>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <AddressForm address={address} errors={errors} onChange={handleChange} />
+          <OrderMethod isPaying={isPaying} onRazorpay={handleRazorpayCheckout} />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="addressLine1">Address line 1</Label>
-              <Input
-                id="addressLine1"
-                value={address.addressLine1}
-                onChange={(e) => handleChange("addressLine1", e.target.value)}
-              />
-              {errors.addressLine1 && (
-                <p className="text-sm text-destructive">{errors.addressLine1}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="addressLine2">Address line 2 (optional)</Label>
-              <Input
-                id="addressLine2"
-                value={address.addressLine2}
-                onChange={(e) => handleChange("addressLine2", e.target.value)}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={address.city}
-                  onChange={(e) => handleChange("city", e.target.value)}
-                />
-                {errors.city && <p className="text-sm text-destructive">{errors.city}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={address.state}
-                  onChange={(e) => handleChange("state", e.target.value)}
-                />
-                {errors.state && <p className="text-sm text-destructive">{errors.state}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode</Label>
-                <Input
-                  id="pincode"
-                  value={address.pincode}
-                  onChange={(e) => handleChange("pincode", e.target.value)}
-                />
-                {errors.pincode && <p className="text-sm text-destructive">{errors.pincode}</p>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              {items.map((item) => (
-                <div key={item.product} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {item.name} × {item.qty}
-                  </span>
-                  <span>₹{(item.price * item.qty).toLocaleString("en-IN")}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between border-t pt-3 text-base font-semibold">
-              <span>Total</span>
-              <span>₹{subtotal.toLocaleString("en-IN")}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Free shipping on orders ₹500+, otherwise ₹50 shipping applies.
-            </p>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <Button onClick={handleRazorpayCheckout} disabled={isPaying} size="lg">
-                {isPaying ? "Processing..." : "Pay with Razorpay"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleWhatsAppOrder}
-                disabled={isWhatsappSubmitting}
-                size="lg"
-              >
-                {isWhatsappSubmitting ? "Placing order..." : "Order via WhatsApp"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <CheckoutOrderSummary items={items} subtotal={subtotal} />
       </div>
+
+      <OrderSuccessOverlay show={showSuccess} orderId={successOrderId ?? undefined} />
     </div>
   );
 }
