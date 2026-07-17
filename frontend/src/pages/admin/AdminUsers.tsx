@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { getAdminUsers } from "@/api/admin.api";
 import Spinner from "@/components/shared/Spinner";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { cn } from "@/lib/utils";
 import type { AdminUserSummary } from "@/types";
 
 export default function AdminUsers() {
@@ -19,24 +21,38 @@ export default function AdminUsers() {
 
   return (
     <div className="container py-8">
-      <h1 className="mb-6 text-2xl font-bold">Users</h1>
+      <AdminPageHeader
+        title="Users"
+        description={`${users.length} user${users.length === 1 ? "" : "s"}`}
+      />
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-soft">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50">
+          <thead className="border-b border-border bg-muted/40">
             <tr>
-              <th className="p-3 text-left font-medium">Name</th>
-              <th className="p-3 text-left font-medium">Email</th>
-              <th className="p-3 text-left font-medium">Role</th>
-              <th className="p-3 text-left font-medium">Joined</th>
+              <th className="p-3 text-left font-semibold text-foreground">Name</th>
+              <th className="p-3 text-left font-semibold text-foreground">Email</th>
+              <th className="p-3 text-left font-semibold text-foreground">Role</th>
+              <th className="p-3 text-left font-semibold text-foreground">Joined</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user._id} className="border-b last:border-0">
-                <td className="p-3 font-medium">{user.name}</td>
+              <tr key={user._id} className="border-b border-border last:border-0 hover:bg-accent/40">
+                <td className="p-3 font-semibold text-foreground">{user.name}</td>
                 <td className="p-3 text-muted-foreground">{user.email}</td>
-                <td className="p-3 capitalize">{user.role}</td>
+                <td className="p-3">
+                  <span
+                    className={cn(
+                      "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+                      user.role === "admin"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {user.role}
+                  </span>
+                </td>
                 <td className="p-3 text-muted-foreground">
                   {new Date(user.createdAt).toLocaleDateString("en-IN")}
                 </td>
