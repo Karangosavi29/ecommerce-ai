@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { getProducts, getCategories } from "@/api/products.api";
+import { getAllHomeSections, type HomeSectionKey } from "@/api/homeSections.api";
 import ProductCard from "@/components/shared/ProductCard";
 import Spinner from "@/components/shared/Spinner";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,33 @@ import { useRecentlyViewedIds } from "@/hooks/useRecentlyViewed";
 import type { Product } from "@/types";
 
 export default function Home() {
+  const [curatedSections, setCuratedSections] = useState<Record<HomeSectionKey, Product[]>>({
+    flashSale: [],
+    featured: [],
+    bestSellers: [],
+  });
+  const [isSectionsLoading, setIsSectionsLoading] = useState(true);
+
+  useEffect(() => {
+    getAllHomeSections()
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        const next: Record<HomeSectionKey, Product[]> = {
+          flashSale: [],
+          featured: [],
+          bestSellers: [],
+        };
+        for (const section of data as { key: HomeSectionKey; productIds: Product[] }[]) {
+          next[section.key] = section.productIds ?? [];
+        }
+        setCuratedSections(next);
+      })
+      .catch(() => {
+      })
+      .finally(() => setIsSectionsLoading(false));
+  }, []);
+
+ 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
 
@@ -28,7 +56,7 @@ export default function Home() {
       .finally(() => setIsCatalogLoading(false));
   }, []);
 
-  const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -41,7 +69,6 @@ export default function Home() {
     getCategories()
       .then((res) => setCategories(res.data.categories ?? res.data))
       .catch(() => {
-        // non-critical — filter bar just won't show categories
       });
   }, []);
 
@@ -74,8 +101,6 @@ export default function Home() {
     shopGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const featured = useMemo(() => allProducts.slice(0, 8), [allProducts]);
-
   const newArrivals = useMemo(() => {
     const withDates = allProducts.filter((p: any) => p.createdAt);
     const sorted =
@@ -86,12 +111,6 @@ export default function Home() {
         : [...allProducts].reverse(); // fallback: assume API returns oldest-first
     return sorted.slice(0, 8);
   }, [allProducts]);
-
-  const bestSellers = useMemo(() => {
-    return allProducts.slice(8, 16).length > 0 ? allProducts.slice(8, 16) : allProducts.slice(0, 8);
-  }, [allProducts]);
-
-  const flashSaleProducts = useMemo(() => allProducts.slice(0, 6), [allProducts]);
 
   const recentlyViewedIds = useRecentlyViewedIds();
   const recentlyViewed = useMemo(
@@ -119,8 +138,8 @@ export default function Home() {
         eyebrow="Ends tonight"
         title="Flash Sale"
         subtitle="Today's picks — refreshed daily."
-        products={flashSaleProducts}
-        isLoading={isCatalogLoading}
+        products={curatedSections.flashSale}
+        isLoading={isSectionsLoading}
         headerAccessory={<FlashSaleCountdown />}
         emptyMessage="No deals right now — check back soon."
       />
@@ -129,8 +148,9 @@ export default function Home() {
         <ProductRail
           eyebrow="Handpicked"
           title="Featured Products"
-          products={featured}
-          isLoading={isCatalogLoading}
+          products={curatedSections.featured}
+          isLoading={isSectionsLoading}
+          emptyMessage="Nothing featured yet — check back soon."
         />
       </div>
 
@@ -139,8 +159,9 @@ export default function Home() {
       <ProductRail
         eyebrow="Popular"
         title="Best Sellers"
-        products={bestSellers}
-        isLoading={isCatalogLoading}
+        products={curatedSections.bestSellers}
+        isLoading={isSectionsLoading}
+        emptyMessage="No best sellers picked yet — check back soon."
       />
 
       <div className="border-t border-border bg-card/40">
