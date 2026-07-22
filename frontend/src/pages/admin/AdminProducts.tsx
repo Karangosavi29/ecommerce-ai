@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Trash2, Plus, ImagePlus } from "lucide-react";
+import { Pencil, Trash2, Plus, ImagePlus, X, GripVertical } from "lucide-react";
 import {
   getAdminProducts,
   createProduct,
@@ -19,12 +19,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import type { Product } from "@/types";
+import type { Product, ProductImage } from "@/types";
 
 interface FormState {
   name: string;
   description: string;
   price: number;
+  mrp: string;
   category: string;
   stock: number;
 }
@@ -33,9 +34,12 @@ const emptyForm: FormState = {
   name: "",
   description: "",
   price: 0,
+  mrp: "",
   category: "",
   stock: 0,
 };
+
+const MAX_IMAGES = 6;
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,10 +47,15 @@ export default function AdminProducts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+
+  const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const totalImageCount = existingImages.length + newImageFiles.length;
 
   const fetchProducts = () => {
     setIsLoading(true);
@@ -60,11 +69,16 @@ export default function AdminProducts() {
     fetchProducts();
   }, []);
 
+  const resetImageState = () => {
+    setExistingImages([]);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
+  };
+
   const openCreateDialog = () => {
     setEditingId(null);
     setForm(emptyForm);
-    setImageFile(null);
-    setImagePreview("");
+    resetImageState();
     setDialogOpen(true);
   };
 
@@ -74,23 +88,53 @@ export default function AdminProducts() {
       name: product.name,
       description: product.description,
       price: product.price,
+      mrp: product.mrp != null ? String(product.mrp) : "",
       category: product.category,
       stock: product.stock,
     });
-    setImageFile(null);
-    setImagePreview(product.imageUrl ?? "");
+    const existing =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.imageUrl
+        ? [{ url: product.imageUrl, cloudinaryId: product.cloudinaryId ?? "" }]
+        : [];
+    setExistingImages(existing);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
     setDialogOpen(true);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
+    const room = MAX_IMAGES - totalImageCount;
+    if (room <= 0) {
+      toast.error(`You can only have up to ${MAX_IMAGES} images`);
+      return;
+    }
+    const accepted = files.slice(0, room);
+    if (files.length > accepted.length) {
+      toast.error(`Only added ${accepted.length} — max ${MAX_IMAGES} images per product`);
+    }
 
-    setImageFile(file);
+    setNewImageFiles((prev) => [...prev, ...accepted]);
+    accepted.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => setNewImagePreviews((prev) => [...prev, reader.result as string]);
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = "";
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -104,8 +148,12 @@ export default function AdminProducts() {
       toast.error("Price must be greater than 0");
       return;
     }
-    if (!editingId && !imageFile) {
-      toast.error("Please upload a product image");
+    if (form.mrp && Number(form.mrp) < form.price) {
+      toast.error("MRP should be greater than or equal to the price");
+      return;
+    }
+    if (!editingId && totalImageCount === 0) {
+      toast.error("Please upload at least one product image");
       return;
     }
 
@@ -115,9 +163,14 @@ export default function AdminProducts() {
     formData.append("price", String(form.price));
     formData.append("stock", String(form.stock));
     formData.append("category", form.category);
-    if (imageFile) {
-      formData.append("image", imageFile); // must match upload.single("image")
+    if (form.mrp) formData.append("mrp", form.mrp);
+
+    if (editingId) {
+      formData.append("existingImages", JSON.stringify(existingImages));
     }
+    newImageFiles.forEach((file) => {
+      formData.append("images", file); 
+    });
 
     setIsSubmitting(true);
     try {
@@ -192,7 +245,14 @@ export default function AdminProducts() {
                 </td>
                 <td className="p-3 font-semibold text-foreground">{product.name}</td>
                 <td className="p-3 capitalize text-muted-foreground">{product.category}</td>
-                <td className="p-3 text-foreground">₹{product.price.toLocaleString("en-IN")}</td>
+                <td className="p-3 text-foreground">
+                  ₹{product.price.toLocaleString("en-IN")}
+                  {product.mrp && product.mrp > product.price && (
+                    <span className="ml-1.5 text-xs text-muted-foreground line-through">
+                      ₹{product.mrp.toLocaleString("en-IN")}
+                    </span>
+                  )}
+                </td>
                 <td className="p-3">
                   <span
                     className={
@@ -242,36 +302,79 @@ export default function AdminProducts() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Image Upload */}
+            {/* Multi-image upload */}
             <div className="space-y-2">
-              <Label>Product Image</Label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-4 transition-colors hover:border-primary"
-              >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="h-32 w-32 rounded-lg bg-muted object-contain p-2"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <ImagePlus className="h-10 w-10" />
-                    <span className="text-sm">Click to upload image</span>
-                  </div>
-                )}
-                {imageFile && (
-                  <p className="mt-2 text-xs text-muted-foreground">{imageFile.name}</p>
-                )}
-              </div>
+              <Label>Product Images ({totalImageCount}/{MAX_IMAGES})</Label>
+
+              {(existingImages.length > 0 || newImagePreviews.length > 0) && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {existingImages.map((img, i) => (
+                    <div key={`existing-${img.url}-${i}`} className="group relative aspect-square">
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="h-full w-full rounded-lg border border-border bg-muted object-contain p-1"
+                      />
+                      {i === 0 && (
+                        <span className="absolute bottom-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                          Primary
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(i)}
+                        aria-label="Remove image"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white shadow-soft"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {newImagePreviews.map((src, i) => (
+                    <div key={`new-${i}`} className="group relative aspect-square">
+                      <img
+                        src={src}
+                        alt=""
+                        className="h-full w-full rounded-lg border-2 border-primary/40 bg-muted object-contain p-1"
+                      />
+                      <span className="absolute bottom-1 left-1 rounded bg-success px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        New
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(i)}
+                        aria-label="Remove image"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white shadow-soft"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {totalImageCount < MAX_IMAGES && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-4 text-muted-foreground transition-colors hover:border-primary"
+                >
+                  <ImagePlus className="h-6 w-6" />
+                  <span className="mt-1 text-xs">
+                    Click to add image{totalImageCount > 0 ? "s" : ""} (up to {MAX_IMAGES} total)
+                  </span>
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
                 className="hidden"
-                onChange={handleImageChange}
+                onChange={handleImageSelect}
               />
+              <p className="text-xs text-muted-foreground">
+                First image is the primary one shown in listings.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -308,6 +411,20 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="p-mrp">MRP (₹, optional)</Label>
+                <Input
+                  id="p-mrp"
+                  type="number"
+                  min={0}
+                  value={form.mrp}
+                  onChange={(e) => setForm({ ...form, mrp: e.target.value })}
+                  placeholder="Original price, for a strikethrough"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="p-stock">Stock</Label>
                 <Input
                   id="p-stock"
@@ -318,16 +435,15 @@ export default function AdminProducts() {
                   required
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="p-category">Category</Label>
-              <Input
-                id="p-category"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="p-category">Category</Label>
+                <Input
+                  id="p-category"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
             <DialogFooter>

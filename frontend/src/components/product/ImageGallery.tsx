@@ -11,8 +11,11 @@ interface ImageGalleryProps {
 
 function getImages(product: Product): string[] {
   const raw = (product as Record<string, unknown>).images;
-  if (Array.isArray(raw) && raw.every((i) => typeof i === "string") && raw.length > 0) {
-    return raw as string[];
+  if (Array.isArray(raw) && raw.length > 0) {
+    const urls = raw
+      .map((item) => (typeof item === "string" ? item : (item as { url?: string })?.url))
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+    if (urls.length > 0) return urls;
   }
   return product.imageUrl ? [product.imageUrl] : [];
 }

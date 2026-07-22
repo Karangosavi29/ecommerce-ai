@@ -1,19 +1,14 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, ShoppingCart, Eye, Check } from "lucide-react";
+import { Heart, Eye, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
 
 
 interface EnrichedProduct extends Product {
-  rating?: number;
-  reviewCount?: number;
-  mrp?: number; 
   brand?: string;
 }
 
@@ -23,30 +18,15 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onQuickView }: ProductCardProps) {
-  const { _id, name, category, imageUrl, brand, mrp } = product;
+  const { _id, name, category, imageUrl, brand, mrp, ratings } = product;
   const stock = typeof product.stock === "number" ? product.stock : Number(product.stock) || 0;
   const price = typeof product.price === "number" ? product.price : Number(product.price) || 0;
   const outOfStock = stock <= 0;
   const hasDiscount = !!mrp && mrp > price;
   const discountPercent = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0;
 
-  const addItem = useCartStore((s) => s.addItem);
-  const isMutating = useCartStore((s) => s.isMutating);
   const isWishlisted = useWishlistStore((s) => s.has(_id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
-
-  const [justAdded, setJustAdded] = useState(false);
-
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (outOfStock) return;
-    const ok = await addItem(_id, 1);
-    if (ok) {
-      setJustAdded(true);
-      window.setTimeout(() => setJustAdded(false), 1600);
-    }
-  };
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -150,38 +130,36 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
               {name}
             </h3>
 
-            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+            {typeof ratings === "number" && (
+              <div className="flex items-center gap-0.5" aria-label={`Rated ${ratings.toFixed(1)} out of 5`}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      i < Math.round(ratings) ? "fill-warning text-warning" : "fill-muted text-muted"
+                    )}
+                  />
+                ))}
+                <span className="ml-1 text-xs font-medium text-muted-foreground">{ratings.toFixed(1)}</span>
+              </div>
+            )}
+
+            <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
               <span className="text-lg font-bold text-foreground">
                 ₹{price.toLocaleString("en-IN")}
               </span>
               {hasDiscount && (
-                <span className="text-sm text-muted-foreground line-through">
-                  ₹{mrp!.toLocaleString("en-IN")}
-                </span>
+                <>
+                  <span className="text-xs text-muted-foreground line-through">
+                    ₹{mrp!.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-xs font-semibold text-success">
+                    {discountPercent}% OFF
+                  </span>
+                </>
               )}
             </div>
-
-            <Button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={outOfStock || isMutating}
-              className={cn(
-                "mt-3 w-full gap-1.5 transition-colors",
-                justAdded && "bg-success text-white hover:bg-success"
-              )}
-            >
-              {justAdded ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Added
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4" />
-                  {outOfStock ? "Out of stock" : "Add to Cart"}
-                </>
-              )}
-            </Button>
           </CardContent>
         </Link>
       </Card>
