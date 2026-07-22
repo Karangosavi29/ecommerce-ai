@@ -16,6 +16,11 @@ const productSchema = new mongoose.Schema(
             required: [true, "Price is required"],
             min:      [0, "Price cannot be negative"],
         },
+        mrp: {
+            type:    Number,
+            min:     [0, "MRP cannot be negative"],
+            default: null,
+        },
         stock: {
             type:    Number,
             required:[true, "Stock is required"],
@@ -36,6 +41,19 @@ const productSchema = new mongoose.Schema(
             type:    String,
             default: "",
         },
+        images: [
+            {
+                url: {
+                    type: String,
+                    required: true,
+                },
+                cloudinaryId: {
+                    type: String,
+                    required: true,
+                },
+                _id: false,
+            },
+        ],
         isActive: {
             type:    Boolean,
             default: true,
@@ -44,7 +62,6 @@ const productSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Text index for search
 productSchema.index({ name: "text", description: "text", category: "text" });
 
 export default mongoose.model("Product", productSchema);

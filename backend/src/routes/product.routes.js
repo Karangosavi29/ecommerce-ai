@@ -28,7 +28,7 @@ router.post(
   "/",
   verifyJWT,
   adminOnly,
-  upload.single("image"),
+  upload.array("images", 6),
   validateCreateProduct,
   createProduct,
 );
@@ -37,7 +37,7 @@ router.put(
   verifyJWT,
   adminOnly,
   validateObjectId(),
-  upload.single("image"),
+  upload.array("images", 6),
   validateUpdateProduct,
   updateProduct,
 );

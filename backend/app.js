@@ -13,6 +13,7 @@ import { mongoSanitizeMiddleware } from "./src/middleware/sanitize.middleware.js
 import { authLimiter, generalApiLimiter } from "./src/middleware/rateLimiter.middleware.js";
 import wishlistRouter from "./src/routes/wishlist.routes.js";
 import couponRouter from "./src/routes/coupon.routes.js";
+import homeSectionRouter from "./src/routes/homeSection.routes.js";
 import multer from "multer";
 
 const app = express();
@@ -54,6 +55,7 @@ app.use("/api/payment", paymentRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/wishlist", wishlistRouter);
 app.use("/api/coupons", couponRouter);
+app.use("/api/home-sections", homeSectionRouter);
 
 //  404 handler
 app.use((req, res, next) => {

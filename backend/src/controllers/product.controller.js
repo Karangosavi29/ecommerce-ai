@@ -18,12 +18,12 @@ const getCategories = asyncHandler(async (req, res) => {
 });
 
 const createProduct = asyncHandler(async (req, res) => {
-    const product = await productService.createProduct(req.body, req.file);
+    const product = await productService.createProduct(req.body, req.files);
     return res.status(201).json(new ApiResponse(201, product, "Product created successfully"));
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
-    const product = await productService.updateProduct(req.params.id, req.body, req.file);
+    const product = await productService.updateProduct(req.params.id, req.body, req.files);
     return res.status(200).json(new ApiResponse(200, product, "Product updated successfully"));
 });
 

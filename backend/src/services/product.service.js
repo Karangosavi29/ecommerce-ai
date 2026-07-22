@@ -9,6 +9,10 @@ const PRODUCT_TTL    = 600;
 const CATEGORIES_TTL = 3600;
 
 const MAX_LIMIT = 50; // hard ceiling regardless of what client requests
+const MAX_IMAGES = 6;
+
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const listProducts = async ({ search, category, minPrice, maxPrice, page, limit }) => {
     const safePage  = Math.max(1, page);
@@ -19,7 +23,16 @@ const listProducts = async ({ search, category, minPrice, maxPrice, page, limit 
     if (cached) return { data: cached, fromCache: true };
 
     const filter = { isActive: true };
-    if (search)   filter.$text    = { $search: search };
+
+    if (search) {
+        const safeSearch = escapeRegex(search.trim());
+        filter.$or = [
+            { name: { $regex: safeSearch, $options: "i" } },
+            { description: { $regex: safeSearch, $options: "i" } },
+            { category: { $regex: safeSearch, $options: "i" } },
+        ];
+    }
+
     if (category) filter.category = category.toLowerCase();
     if (minPrice !== undefined || maxPrice !== undefined) {
         filter.price = {};
@@ -70,15 +83,27 @@ const invalidateProductCaches = async (id) => {
     await Promise.all(tasks);
 };
 
-const createProduct = async ({ name, description, price, stock, category }, file) => {
-    const productData = { name, description, price, stock, category };
+const uploadImages = async (files) => {
+    const uploads = await Promise.all(
+        files.map(async (file) => {
+            const uploaded = await uploadOncloudinary(file.path);
+            if (!uploaded) throw new ApiError(500, "Image upload failed");
+            await fs.unlink(file.path).catch(() => {});
+            return { url: uploaded.url, cloudinaryId: uploaded.public_id };
+        })
+    );
+    return uploads;
+};
 
-    if (file) {
-        const uploaded = await uploadOncloudinary(file.path);
-        if (!uploaded) throw new ApiError(500, "Image upload failed");
-        productData.imageUrl     = uploaded.url;
-        productData.cloudinaryId = uploaded.public_id;
-        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload
+const createProduct = async ({ name, description, price, mrp, stock, category }, files) => {
+    const productData = { name, description, price, stock, category };
+    if (mrp !== undefined) productData.mrp = mrp;
+
+    if (files && files.length > 0) {
+        const images = await uploadImages(files.slice(0, MAX_IMAGES));
+        productData.images = images;
+        productData.imageUrl = images[0].url;
+        productData.cloudinaryId = images[0].cloudinaryId;
     }
 
     const product = await productRepository.create(productData);
@@ -86,17 +111,33 @@ const createProduct = async ({ name, description, price, stock, category }, file
     return product;
 };
 
-const updateProduct = async (id, updateData, file) => {
+const updateProduct = async (id, updateData, files) => {
     const existing = await productRepository.findById(id);
     if (!existing) throw new ApiError(404, "Product not found");
 
     const data = { ...updateData };
-    if (file) {
-        const uploaded = await uploadOncloudinary(file.path);
-        if (!uploaded) throw new ApiError(500, "Image upload failed");
-        data.imageUrl     = uploaded.url;
-        data.cloudinaryId = uploaded.public_id;
-        await fs.unlink(file.path).catch(() => {}); // cleanup temp file after successful Cloudinary upload
+
+  
+    let keptImages = existing.images ?? [];
+    if (typeof data.existingImages === "string") {
+        try {
+            keptImages = JSON.parse(data.existingImages);
+        } catch {
+            throw new ApiError(400, "Invalid existingImages format");
+        }
+    }
+    delete data.existingImages;
+
+    let newImages = [];
+    if (files && files.length > 0) {
+        newImages = await uploadImages(files);
+    }
+
+    if (keptImages.length > 0 || newImages.length > 0) {
+        const combinedImages = [...keptImages, ...newImages].slice(0, MAX_IMAGES);
+        data.images = combinedImages;
+        data.imageUrl = combinedImages[0]?.url ?? "";
+        data.cloudinaryId = combinedImages[0]?.cloudinaryId ?? "";
     }
 
     const updated = await productRepository.updateById(id, data);
