@@ -38,24 +38,24 @@ app.use(cookieParser());
 app.use(mongoSanitizeMiddleware);
 
 //  Rate limiting
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
-app.use("/api", (req, res, next) => {
+app.use("/api/v1/auth/login", authLimiter);
+app.use("/api/v1/auth/register", authLimiter);
+app.use("/api/v1", (req, res, next) => {
     // authLimiter already handled these two paths above — skip the general limiter for them
     if (req.path === "/auth/login" || req.path === "/auth/register") return next();
     return generalApiLimiter(req, res, next);
 });
 
 //  Routes
-app.use("/api/auth", authRouter);
-app.use("/api/products", productRouter);
-app.use("/api/cart", cartRouter);
-app.use("/api/orders", orderRouter);
-app.use("/api/payment", paymentRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/wishlist", wishlistRouter);
-app.use("/api/coupons", couponRouter);
-app.use("/api/home-sections", homeSectionRouter);
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/products", productRouter);
+app.use("/api/v1/cart", cartRouter);
+app.use("/api/v1/orders", orderRouter);
+app.use("/api/v1/payment", paymentRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/wishlist", wishlistRouter);
+app.use("/api/v1/coupons", couponRouter);
+app.use("/api/v1/home-sections", homeSectionRouter);
 
 //  404 handler
 app.use((req, res, next) => {
