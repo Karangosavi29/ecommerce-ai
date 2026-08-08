@@ -68,7 +68,8 @@ const useAuthStore = create<AuthState>((set) => ({
   register: async ({ name, email, password }) => {
     set({ isSubmitting: true });
     try {
-      const res = await registerUser({ name, email, password });
+      await registerUser({ name, email, password });
+      const res = await loginUser({ email, password });
       set({ user: res.data.user ?? res.data, isAuthenticated: true });
       toast.success("Account created successfully");
       return true;

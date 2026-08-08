@@ -12,6 +12,7 @@ class ApiError extends Error {
         this.success =false;         // Indicates API failure
         this.errors = errors;         // Array for field-specific errors
         this.errorCode = errorCode;   // Stable machine-readable code, e.g. "TOKEN_EXPIRED"
+        this.isOperational = true;
 
         if (stack) {
             this.stack = stack;

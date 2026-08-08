@@ -13,12 +13,13 @@ const FLAT_SHIPPING_ESTIMATE = 50;
 
 export function OrderSummary({ subtotal, onCheckout }: OrderSummaryProps) {
   const shippingEstimate = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_ESTIMATE;
-  const estimatedTotal = subtotal + shippingEstimate;
-
 
   const [couponPreview, setCouponPreview] = useState<{ code: string; discountAmount: number } | null>(
     null
   );
+
+  const discount = couponPreview?.discountAmount ?? 0;
+  const estimatedTotal = subtotal + shippingEstimate - discount;
 
   return (
     <div className="h-fit rounded-lg border border-border bg-card p-6 shadow-soft">
@@ -48,7 +49,7 @@ export function OrderSummary({ subtotal, onCheckout }: OrderSummaryProps) {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Coupon ({couponPreview.code})</span>
             <span className="text-success">
-              −₹{couponPreview.discountAmount.toLocaleString("en-IN")} (estimate)
+              −₹{couponPreview.discountAmount.toLocaleString("en-IN")}
             </span>
           </div>
         )}
@@ -60,7 +61,7 @@ export function OrderSummary({ subtotal, onCheckout }: OrderSummaryProps) {
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
         Taxes and final shipping calculated at checkout.
-        {couponPreview && " Coupon discount is not yet applied automatically."}
+        {couponPreview && " Final discount confirmed at checkout."}
       </p>
 
       <Button className="mt-5 w-full" size="lg" onClick={onCheckout}>

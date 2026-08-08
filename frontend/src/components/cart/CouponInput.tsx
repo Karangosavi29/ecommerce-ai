@@ -66,7 +66,6 @@ export function CouponInput({ orderValue, onPreview }: CouponInputProps) {
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
             <strong>{applied.code}</strong> would save you ₹{applied.discountAmount.toLocaleString("en-IN")}.
-            This is an estimate — it isn't automatically deducted from your order total yet.
           </span>
         </div>
       )}

@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 
 const applyCouponSchema = z.object({
     code: z.string().trim().min(1, "Coupon code is required"),
+    orderValue: z.coerce.number().min(0, "Order value must be a positive number"),
 });
 
 const createCouponSchema = z.object({

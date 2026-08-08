@@ -7,16 +7,11 @@ const AIChatButton = () => {
   const [showGreeting, setShowGreeting] = useState(false);
 
   useEffect(() => {
-    const seen = localStorage.getItem("ai_assistant_seen");
+    const timer = setTimeout(() => {
+      setShowGreeting(true);
+    }, 3000);
 
-    if (!seen) {
-      const timer = setTimeout(() => {
-        setShowGreeting(true);
-        localStorage.setItem("ai_assistant_seen", "true");
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
+    return () => clearTimeout(timer);
   }, []);
 
   return (

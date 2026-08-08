@@ -4,7 +4,6 @@ import { Toaster } from "react-hot-toast";
 
 import { useAuth } from "@/hooks/useAuth";
 import useWishlistStore from "@/store/wishlistStore";
-import Spinner from "@/components/shared/Spinner";
 import MainLayout from "@/components/layout/MainLayout";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
@@ -25,12 +24,11 @@ import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminHomeSections from "@/pages/admin/AdminHomeSections";
-import AIAssistantLauncher from "@/components/ai/AIAssistantLauncher";
 import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AIChatButton from "./components/ai/AIChatButton";
 
 function App() {
-  const { checkAuth, isLoading, isAuthenticated } = useAuth();
+  const { checkAuth, isAuthenticated } = useAuth();
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
 
   useEffect(() => {
@@ -43,15 +41,10 @@ function App() {
     }
   }, [isAuthenticated, fetchWishlist]);
 
-  if (isLoading) {
-    return <Spinner fullScreen />;
-  }
-
   return (
     <BrowserRouter>
       <Toaster position="top-center" />
-        <AIAssistantLauncher />
-        <AIChatButton />
+      <AIChatButton />
       <Routes>
         {/* Storefront — wrapped in the customer Navbar/Footer */}
         <Route element={<MainLayout />}>
