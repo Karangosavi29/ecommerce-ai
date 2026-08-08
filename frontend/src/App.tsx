@@ -25,7 +25,9 @@ import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminHomeSections from "@/pages/admin/AdminHomeSections";
+import AIAssistantLauncher from "@/components/ai/AIAssistantLauncher";
 import AdminCoupons from "@/pages/admin/AdminCoupons";
+import AIChatButton from "./components/ai/AIChatButton";
 
 function App() {
   const { checkAuth, isLoading, isAuthenticated } = useAuth();
@@ -48,6 +50,8 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" />
+        <AIAssistantLauncher />
+        <AIChatButton />
       <Routes>
         {/* Storefront — wrapped in the customer Navbar/Footer */}
         <Route element={<MainLayout />}>

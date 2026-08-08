@@ -1,15 +1,3 @@
-/**
- * ⚠️ PLACEHOLDER DATA — NOT FROM YOUR BACKEND ⚠️
- * ------------------------------------------------
- * Your product.model.js has no `brand` field and there is no review model,
- * so "Top Brands" and "Customer Reviews" have nothing real to render yet.
- *
- * Everything below is fictional (invented brand names, sample quotes) so it
- * never gets mistaken for real data. Delete this file and wire the two
- * sections below to real endpoints once you add:
- *   - a `brand` field (or a Brand collection) to Products
- *   - a Review model + `GET /products/:id/reviews` (or similar)
- */
 
 export interface PlaceholderBrand {
   id: string;

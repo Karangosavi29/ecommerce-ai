@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { getProducts, getCategories } from "@/api/products.api";
@@ -15,6 +16,8 @@ import { TopBrands } from "@/components/home/TopBrands";
 import { CustomerReviews } from "@/components/home/CustomerReviews";
 import { Newsletter } from "@/components/home/Newsletter";
 import { useRecentlyViewedIds } from "@/hooks/useRecentlyViewed";
+import AIProductAssistant from "@/components/ai/AIProductAssistant";
+import FloatingAIProductAssistant from "@/components/ai/FloatingAIProductAssistant";
 import type { Product } from "@/types";
 
 export default function Home() {
@@ -44,7 +47,7 @@ export default function Home() {
       .finally(() => setIsSectionsLoading(false));
   }, []);
 
- 
+
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
 
@@ -56,7 +59,7 @@ export default function Home() {
       .finally(() => setIsCatalogLoading(false));
   }, []);
 
-    const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -64,6 +67,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   const shopGridRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     getCategories()
@@ -71,6 +75,24 @@ export default function Home() {
       .catch(() => {
       });
   }, []);
+
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") ?? "";
+    const urlCategory = searchParams.get("category") ?? "all";
+
+    setSearch(urlSearch);
+    setSearchInput(urlSearch);
+    setActiveCategory(urlCategory);
+
+    if (urlSearch || urlCategory !== "all") {
+      setTimeout(() => {
+        shopGridRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  }, [searchParams]);
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -96,6 +118,13 @@ export default function Home() {
     setSearch(searchInput.trim());
   };
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
   const handleCategorySelect = (category: string) => {
     setActiveCategory(category);
     shopGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -106,8 +135,8 @@ export default function Home() {
     const sorted =
       withDates.length > 0
         ? [...withDates].sort(
-            (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
+          (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
         : [...allProducts].reverse(); // fallback: assume API returns oldest-first
     return sorted.slice(0, 8);
   }, [allProducts]);
@@ -124,7 +153,6 @@ export default function Home() {
   return (
     <div>
       <HeroBanner />
-
       <CategoryGrid
         categories={categories}
         activeCategory={activeCategory}
@@ -179,12 +207,21 @@ export default function Home() {
 
       <CustomerReviews />
 
-      <section ref={shopGridRef} className="scroll-mt-20 border-t border-border py-10 sm:py-12">
+      <section
+        id="shop"
+        ref={shopGridRef}
+        className="scroll-mt-20 border-t border-border py-10 sm:py-12"
+      >
         <div className="container">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Shop All Products
-            </h2>
+            <div>
+              <p className="mb-1.5 font-mono text-xs font-semibold uppercase tracking-widest text-primary">
+                [ Full catalog ]
+              </p>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Shop All Products
+              </h2>
+            </div>
 
             <form onSubmit={handleSearchSubmit} className="flex w-full max-w-sm gap-2">
               <Input
@@ -230,16 +267,25 @@ export default function Home() {
               No products found.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
+            <>
+
+              <div className="max-h-[780px] overflow-y-auto overflow-x-hidden pr-1 thin-scrollbar">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {products.map((product) => (
+                    <ProductCard key={product._id} product={product} />
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
+                Showing {products.length} products — scroll to see more
+              </p>
+            </>
           )}
         </div>
       </section>
 
       <Newsletter />
+      <FloatingAIProductAssistant />
     </div>
   );
 }

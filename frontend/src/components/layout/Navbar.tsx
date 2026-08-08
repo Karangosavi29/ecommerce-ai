@@ -63,8 +63,14 @@ export default function Navbar() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
+
     const q = searchQuery.trim();
-    if (q) navigate(`/?search=${encodeURIComponent(q)}`);
+
+    if (q) {
+      navigate(`/?search=${encodeURIComponent(q)}#shop`);
+    } else {
+      navigate("/");
+    }
   };
 
   return (
