@@ -14,6 +14,7 @@ import { authLimiter, generalApiLimiter } from "./src/middleware/rateLimiter.mid
 import wishlistRouter from "./src/routes/wishlist.routes.js";
 import couponRouter from "./src/routes/coupon.routes.js";
 import homeSectionRouter from "./src/routes/homeSection.routes.js";
+import aiRouter from "./src/routes/ai.routes.js";
 import multer from "multer";
 
 const app = express();
@@ -56,6 +57,7 @@ app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/wishlist", wishlistRouter);
 app.use("/api/v1/coupons", couponRouter);
 app.use("/api/v1/home-sections", homeSectionRouter);
+app.use("/api/v1/ai", aiRouter);
 
 //  404 handler
 app.use((req, res, next) => {
