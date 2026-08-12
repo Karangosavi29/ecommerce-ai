@@ -15,6 +15,7 @@ import {
   validateCreateProduct,
   validateUpdateProduct,
 } from "../validators/product.validator.js";
+import reviewRouter from "./review.routes.js";
 
 const router = Router();
 
@@ -22,6 +23,8 @@ const router = Router();
 router.get("/", validateListProducts, getProducts);
 router.get("/categories", getCategories);
 router.get("/:id", validateObjectId(), getProductById);
+
+router.use("/:productId/reviews", reviewRouter);
 
 // Admin only
 router.post(

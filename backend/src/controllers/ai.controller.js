@@ -34,3 +34,24 @@ export const aiAssistant = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, { message: reply, needsMoreInfo, products }, "Assistant responded."));
 });
+
+// POST /api/ai/product-description (admin only)
+export const aiProductDescription = asyncHandler(async (req, res) => {
+  const { name, category } = req.body;
+
+  if (typeof name !== "string" || !name.trim()) {
+    throw new ApiError(400, "name is required.");
+  }
+  if (typeof category !== "string" || !category.trim()) {
+    throw new ApiError(400, "category is required.");
+  }
+
+  const description = await aiService.generateProductDescription({
+    name: name.trim(),
+    category: category.trim(),
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { description }, "Description generated."));
+});

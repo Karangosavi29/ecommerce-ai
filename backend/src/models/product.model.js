@@ -49,7 +49,7 @@ const productSchema = new mongoose.Schema(
                 },
                 cloudinaryId: {
                     type: String,
-                    required: true,
+                    default: "",
                 },
                 _id: false,
             },

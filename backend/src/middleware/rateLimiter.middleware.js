@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import redisClient from "../config/redis.js"; 
+import redisClient from "../config/redis.js";
 
 const makeLimiter = ({ windowMs, max, message }) =>
     rateLimit({
@@ -9,17 +9,30 @@ const makeLimiter = ({ windowMs, max, message }) =>
         standardHeaders: true,
         legacyHeaders: false,
         store: new RedisStore({
-            sendCommand: (...args) => redisClient.call(...args), 
+            sendCommand: (...args) => redisClient.call(...args),
         }),
-        message: { success: false, statusCode: 429, message },
+
+        handler: (req, res, _next, options) => {
+            const resetTime = req.rateLimit?.resetTime;
+            const retryAfterSeconds = resetTime
+                ? Math.max(0, Math.ceil((resetTime.getTime() - Date.now()) / 1000))
+                : Math.ceil(options.windowMs / 1000);
+
+            res.status(429).json({
+                success: false,
+                statusCode: 429,
+                message,
+                retryAfter: retryAfterSeconds,
+            });
+        },
     });
 
 const isDev = process.env.NODE_ENV !== "production";
 
 export const authLimiter = makeLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: isDev ? 100 : 10, // generous in dev so testing doesn't lock you out
-    message: "Too many attempts. Please try again in 15 minutes.",
+    windowMs: 5 * 60 * 1000, // was 15 min — shorter window means faster recovery from genuine typos
+    max: isDev ? 1000 : 5,   // was 10 in prod — tighter since the window is now shorter too
+    message: "Too many login attempts. Please try again shortly.",
 });
 
 // Looser: general API traffic

@@ -94,9 +94,14 @@ export const searchProductsWithAI = async (query, { page, limit } = {}) => {
 
 
 export const runProductAssistant = async (message, history = []) => {
-  const conversationText = [...history.map((h) => h.content), message].join("\n");
+  const recentUserText = [
+    ...history.filter((h) => h.role === "user").map((h) => h.content),
+    message,
+  ]
+    .slice(-4)
+    .join("\n");
 
-  const { products: candidateProducts } = await extractFiltersAndFetchProducts(conversationText, {
+  const { products: candidateProducts } = await extractFiltersAndFetchProducts(recentUserText, {
     page: DEFAULT_PAGE,
     limit: ASSISTANT_CANDIDATE_LIMIT,
   });
@@ -123,6 +128,29 @@ export const runProductAssistant = async (message, history = []) => {
     needsMoreInfo: Boolean(result.needsMoreInfo),
     products: recommendedProducts,
   };
+};
+
+export const generateProductDescription = async ({ name, category }) => {
+  const systemPrompt = [
+    "You write product detail content for an e-commerce listing.",
+    "Given only a product name and category, output 4-6 short benefit-focused lines, one per line, plain text.",
+    "Each line should be a standalone phrase or short sentence (like a spec-sheet bullet), NOT connected into paragraphs.",
+    "No markdown, no bullet symbols like '-' or '*', no numbering, no headers, no emojis — just the plain text of each line, separated by newlines.",
+    "Do not invent specific technical specifications (exact capacity numbers, model-specific certifications, exact measurements) you cannot know for certain from the name alone.",
+    "If the product name itself contains a spec (e.g. '55-inch', '7kg', '256GB'), you may reference it naturally in one line.",
+    "Keep every line general, honest, and appealing — about the experience or benefit, not fabricated facts.",
+  ].join(" ");
+
+  const userPrompt = `Product name: ${name}\nCategory: ${category}`;
+
+  const description = await createChatCompletion({
+    systemPrompt,
+    userPrompt,
+    json: false,
+    maxTokens: 220,
+  });
+
+  return typeof description === "string" ? description.trim() : "";
 };
 
 
