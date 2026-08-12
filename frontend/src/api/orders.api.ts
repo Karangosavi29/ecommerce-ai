@@ -6,6 +6,7 @@ export const createOrder = (data: {
   orderType: "online" | "whatsapp";
   paymentMethod?: string; // required + must be "razorpay" when orderType is "online"
   notes?: string;
+  couponCode?: string;
 }) => {
   return axiosClient.post("/orders/create", data);
 };

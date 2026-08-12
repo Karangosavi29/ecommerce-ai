@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import useCartStore from "@/store/cartStore";
+import useCouponStore from "@/store/couponStore";
 import { useAuth } from "@/hooks/useAuth";
 import { createOrder } from "@/api/orders.api";
 import { createPaymentOrder, verifyPayment } from "@/api/payments.api";
@@ -19,6 +20,9 @@ export default function Checkout() {
   const { user } = useAuth();
   const items = useCartStore((state) => state.items);
   const clear = useCartStore((state) => state.clear);
+
+  const coupon = useCouponStore((state) => state.coupon);
+  const clearCoupon = useCouponStore((state) => state.clearCoupon);
 
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: user?.name || "",
@@ -70,6 +74,7 @@ export default function Checkout() {
         shippingAddress: address,
         orderType: "online",
         paymentMethod: "razorpay",
+        couponCode: coupon?.code,
       });
       const { order, orderId } = orderRes.data;
       const realOrderId = orderId ?? order?._id;
@@ -112,6 +117,7 @@ export default function Checkout() {
               orderId: realOrderId,
             });
             await clear();
+            clearCoupon();
             toast.success("Payment successful! Order placed.");
             setSuccessOrderId(realOrderId);
             setShowSuccess(true);
@@ -155,7 +161,7 @@ export default function Checkout() {
           <OrderMethod isPaying={isPaying} onRazorpay={handleRazorpayCheckout} />
         </div>
 
-        <CheckoutOrderSummary items={items} subtotal={subtotal} />
+        <CheckoutOrderSummary items={items} subtotal={subtotal} coupon={coupon} />
       </div>
 
       <OrderSuccessOverlay show={showSuccess} orderId={successOrderId ?? undefined} />

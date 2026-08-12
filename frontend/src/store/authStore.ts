@@ -16,11 +16,16 @@ import type {
   ApiErrorResponse,
 } from "@/types";
 
+interface RateLimitedErrorResponse extends ApiErrorResponse {
+  retryAfter?: number; // seconds, sent by rateLimiter.middleware.js on 429
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSubmitting: boolean;
+  rateLimitedUntil: number | null;
   checkAuth: () => Promise<void>;
   login: (creds: AuthCredentials) => Promise<boolean>;
   register: (data: RegisterPayload) => Promise<boolean>;
@@ -38,6 +43,7 @@ const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
   isSubmitting: false,
+  rateLimitedUntil: null,
 
   checkAuth: async () => {
     try {
@@ -51,13 +57,20 @@ const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async ({ email, password }) => {
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, rateLimitedUntil: null });
     try {
       const res = await loginUser({ email, password });
       set({ user: res.data.user ?? res.data, isAuthenticated: true });
       toast.success("Logged in successfully");
       return true;
     } catch (err) {
+      const axiosErr = err as AxiosError<RateLimitedErrorResponse>;
+
+      if (axiosErr.response?.status === 429) {
+        const retryAfter = axiosErr.response.data?.retryAfter ?? 300; // fallback: 5 min
+        set({ rateLimitedUntil: Date.now() + retryAfter * 1000 });
+      }
+
       toast.error(getErrorMessage(err, "Login failed"));
       return false;
     } finally {
@@ -68,8 +81,7 @@ const useAuthStore = create<AuthState>((set) => ({
   register: async ({ name, email, password }) => {
     set({ isSubmitting: true });
     try {
-      await registerUser({ name, email, password });
-      const res = await loginUser({ email, password });
+      const res = await registerUser({ name, email, password });
       set({ user: res.data.user ?? res.data, isAuthenticated: true });
       toast.success("Account created successfully");
       return true;

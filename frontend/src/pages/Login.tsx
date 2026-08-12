@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,14 +13,41 @@ interface FormErrors {
   password?: string;
 }
 
+const formatCountdown = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
 export default function Login() {
-  const { login, isSubmitting } = useAuth();
+  const { login, isSubmitting, rateLimitedUntil } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
+
+
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  useEffect(() => {
+    if (!rateLimitedUntil) {
+      setSecondsLeft(0);
+      return;
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((rateLimitedUntil - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [rateLimitedUntil]);
+
+  const isRateLimited = secondsLeft > 0;
 
   const from = (location.state as { from?: Location })?.from?.pathname || "/";
 
@@ -40,6 +67,7 @@ export default function Login() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isRateLimited) return;
     if (!validate()) return;
 
     const success = await login({ email, password });
@@ -68,6 +96,13 @@ export default function Login() {
             </p>
           </div>
 
+          {isRateLimited && (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              Too many login attempts. Try again in{" "}
+              <span className="font-semibold tabular-nums">{formatCountdown(secondsLeft)}</span>.
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -77,7 +112,7 @@ export default function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRateLimited}
                 aria-invalid={!!errors.email}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -90,14 +125,18 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRateLimited}
                 aria-invalid={!!errors.password}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-              {isSubmitting ? "Logging in..." : "Log in"}
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting || isRateLimited}>
+              {isRateLimited
+                ? `Try again in ${formatCountdown(secondsLeft)}`
+                : isSubmitting
+                ? "Logging in..."
+                : "Log in"}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

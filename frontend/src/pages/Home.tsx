@@ -263,8 +263,27 @@ export default function Home() {
           {isLoading ? (
             <Spinner fullScreen />
           ) : products.length === 0 ? (
-            <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-              No products found.
+            <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+              <p className="text-base font-medium text-foreground">
+                {search ? `No results for "${search}"` : "No products found"}
+              </p>
+              <p className="max-w-sm text-sm">
+                {search
+                  ? "Try a different keyword, or ask our AI assistant \u2014 it understands things like \"laptops under 30000.\""
+                  : "Try adjusting your filters or check back soon."}
+              </p>
+              {search && (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setSearchInput("");
+                    setActiveCategory("all");
+                  }}
+                  className="mt-1 text-sm font-medium text-primary hover:underline"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <>

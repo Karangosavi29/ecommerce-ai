@@ -5,6 +5,7 @@ export function useAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
   const isSubmitting = useAuthStore((state) => state.isSubmitting);
+  const rateLimitedUntil = useAuthStore((state) => state.rateLimitedUntil);
   const login = useAuthStore((state) => state.login);
   const register = useAuthStore((state) => state.register);
   const logout = useAuthStore((state) => state.logout);
@@ -19,6 +20,7 @@ export function useAuth() {
     isLoading,
     isSubmitting,
     isAdmin,
+    rateLimitedUntil,
     login,
     register,
     logout,

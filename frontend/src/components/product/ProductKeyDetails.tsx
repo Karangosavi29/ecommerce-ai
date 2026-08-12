@@ -9,14 +9,16 @@ export function ProductKeyDetails({ description }: ProductKeyDetailsProps) {
     .filter(Boolean);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="mb-2 text-sm font-semibold text-foreground">Product Details</p>
+    <div className="rounded-lg border border-border bg-card p-5">
+      <p className="mb-3 text-base font-bold text-foreground">
+        {lines.length > 1 ? "Key Features" : "Product Details"}
+      </p>
       {lines.length > 1 ? (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2.5">
           {lines.map((line, i) => (
-            <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
-              {line}
+            <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              <span className="leading-relaxed">{line}</span>
             </li>
           ))}
         </ul>

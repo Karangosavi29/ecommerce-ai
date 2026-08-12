@@ -1,11 +1,24 @@
 import type { CartItem } from "@/types";
 
+interface AppliedCoupon {
+  code: string;
+  discountAmount: number;
+}
+
 interface CheckoutOrderSummaryProps {
   items: CartItem[];
   subtotal: number;
+  coupon?: AppliedCoupon | null;
 }
 
-export function CheckoutOrderSummary({ items, subtotal }: CheckoutOrderSummaryProps) {
+const FREE_SHIPPING_THRESHOLD = 500;
+const FLAT_SHIPPING_ESTIMATE = 50;
+
+export function CheckoutOrderSummary({ items, subtotal, coupon }: CheckoutOrderSummaryProps) {
+  const shippingEstimate = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_ESTIMATE;
+  const discount = coupon?.discountAmount ?? 0;
+  const total = subtotal + shippingEstimate - discount;
+
   return (
     <div className="h-fit rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
       <h2 className="mb-4 text-lg font-bold text-foreground">Order Summary</h2>
@@ -30,12 +43,31 @@ export function CheckoutOrderSummary({ items, subtotal }: CheckoutOrderSummaryPr
         ))}
       </div>
 
+      <div className="mt-4 space-y-2 border-t border-border pt-4">
+        <div className="flex justify-between text-sm text-muted-foreground">
+          <span>Subtotal</span>
+          <span className="text-foreground">₹{subtotal.toLocaleString("en-IN")}</span>
+        </div>
+        <div className="flex justify-between text-sm text-muted-foreground">
+          <span>Shipping</span>
+          <span className={shippingEstimate === 0 ? "font-medium text-success" : "text-foreground"}>
+            {shippingEstimate === 0 ? "Free" : `₹${shippingEstimate}`}
+          </span>
+        </div>
+        {coupon && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Coupon ({coupon.code})</span>
+            <span className="text-success">−₹{coupon.discountAmount.toLocaleString("en-IN")}</span>
+          </div>
+        )}
+      </div>
+
       <div className="mt-4 flex justify-between border-t border-border pt-4 text-base font-bold text-foreground">
         <span>Total</span>
-        <span>₹{subtotal.toLocaleString("en-IN")}</span>
+        <span>₹{total.toLocaleString("en-IN")}</span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Free shipping on orders ₹500+, otherwise ₹50 shipping applies.
+        Final total is confirmed by the server when your order is created.
       </p>
     </div>
   );

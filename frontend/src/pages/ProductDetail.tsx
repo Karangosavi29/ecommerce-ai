@@ -128,7 +128,8 @@ export default function ProductDetail() {
         <span className="line-clamp-1 text-foreground">{product.name}</span>
       </nav>
 
-      <div className="md:flex md:h-[calc(100vh-9rem)] md:items-start md:gap-8">
+      <div className="md:flex md:items-start md:gap-8">
+        {/* Images */}
         <div className="md:w-[42%] md:shrink-0">
           <ShareWishlistBar
             productName={product.name}
@@ -140,34 +141,42 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        <div className="thin-scrollbar mt-6 md:mt-0 md:h-full md:flex-1 md:overflow-y-auto md:pr-2">
-          <div className="flex flex-col gap-4 pb-4">
+        {/* Everything else — simple stacked flow */}
+        <div className="mt-6 md:mt-0 md:min-w-0 md:flex-1">
+          <div className="flex flex-col gap-4">
+            {/* Name */}
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 {product.category}
               </p>
-              <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{product.name}</h1>
+              <h1 className="mt-1 text-2xl font-bold leading-snug text-foreground sm:text-3xl">
+                {product.name}
+              </h1>
+
+              {hasRating && (
+                <div
+                  className="mt-2.5 flex items-center gap-1.5"
+                  aria-label={`Rated ${product.ratings} out of 5`}
+                >
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-4 w-4",
+                        i < Math.round(product.ratings as number)
+                          ? "fill-warning text-warning"
+                          : "fill-muted text-muted"
+                      )}
+                    />
+                  ))}
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {(product.ratings as number).toFixed(1)}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {hasRating && (
-              <div className="flex items-center gap-1.5" aria-label={`Rated ${product.ratings} out of 5`}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={cn(
-                      "h-4 w-4",
-                      i < Math.round(product.ratings as number)
-                        ? "fill-warning text-warning"
-                        : "fill-muted text-muted"
-                    )}
-                  />
-                ))}
-                <span className="text-sm font-medium text-muted-foreground">
-                  {(product.ratings as number).toFixed(1)}
-                </span>
-              </div>
-            )}
-
+            {/* Price */}
             <div>
               <div className="flex flex-wrap items-baseline gap-2">
                 <p className="text-3xl font-bold text-foreground">
@@ -184,23 +193,24 @@ export default function ProductDetail() {
                   </>
                 )}
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
               {hasDiscount && (
-                <p className="mt-1 text-sm font-medium text-success">
+                <p className="mt-1.5 text-sm font-medium text-success">
                   You save ₹{savings.toLocaleString("en-IN")}
                 </p>
               )}
+              <p className="mt-2 text-sm">
+                {outOfStock ? (
+                  <span className="font-semibold text-destructive">Out of stock</span>
+                ) : (
+                  <span className="font-semibold text-success">
+                    In stock ({product.stock} available)
+                  </span>
+                )}
+              </p>
             </div>
 
-            <p className="text-sm">
-              {outOfStock ? (
-                <span className="font-semibold text-destructive">Out of stock</span>
-              ) : (
-                <span className="font-semibold text-success">
-                  In stock ({product.stock} available)
-                </span>
-              )}
-            </p>
-
+            {/* Quantity + buttons */}
             {!outOfStock && (
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-foreground">Quantity</span>
@@ -230,7 +240,6 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Buy Now + Add to Cart */}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 size="lg"
@@ -254,24 +263,21 @@ export default function ProductDetail() {
             </div>
 
             <DeliveryEstimate />
-
-            {/* EMI info */}
             <PaymentOptionsPanel productName={product.name} price={product.price} />
             <FinancingOptions />
 
-            {/* Description / features / specs — single honest section */}
+            {/* About this item */}
             <ProductKeyDetails description={product.description} />
 
             <WarrantyInfo />
             <WhyBuyFromUs />
 
-            {/* Customer Reviews — inside the scrollable panel per spec */}
             <ReviewsSection productId={product._id} />
           </div>
         </div>
       </div>
 
-      {/* Similar Products — outside the fixed-height block, normal page scroll */}
+      {/* Similar Products */}
       {(similar.length > 0 || similarLoading) && (
         <div className="mt-10 border-t border-border">
           <ProductRail title="Similar Products" products={similar} isLoading={similarLoading} />

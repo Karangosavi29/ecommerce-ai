@@ -1,12 +1,14 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Trash2, Plus, ImagePlus, X, GripVertical } from "lucide-react";
+import { Pencil, Trash2, Plus, ImagePlus, X, Sparkles } from "lucide-react";
 import {
   getAdminProducts,
   createProduct,
   updateProduct,
   deleteProduct,
 } from "@/api/admin.api";
+import { getCategories } from "@/api/products.api";
+import { generateProductDescription } from "@/api/ai.api";
 import Spinner from "@/components/shared/Spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { Product, ProductImage } from "@/types";
 
@@ -41,12 +50,20 @@ const emptyForm: FormState = {
 
 const MAX_IMAGES = 6;
 
+// Sentinel value for the "+ Add new category" option in the dropdown —
+// distinct from any real category name.
+const NEW_CATEGORY_VALUE = "__new_category__";
+
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
@@ -65,8 +82,17 @@ export default function AdminProducts() {
       .finally(() => setIsLoading(false));
   };
 
+  const fetchCategories = () => {
+    getCategories()
+      .then((res) => setCategories(res.data.categories ?? res.data ?? []))
+      .catch(() => {
+        // Non-fatal — the "+ Add new category" option still works if this fails.
+      });
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   const resetImageState = () => {
@@ -78,6 +104,7 @@ export default function AdminProducts() {
   const openCreateDialog = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setIsAddingNewCategory(false);
     resetImageState();
     setDialogOpen(true);
   };
@@ -92,6 +119,10 @@ export default function AdminProducts() {
       category: product.category,
       stock: product.stock,
     });
+    // If this product's category isn't in the fetched list yet (edge case —
+    // e.g. list hasn't refreshed), fall back to the free-text input so the
+    // value isn't silently lost.
+    setIsAddingNewCategory(!categories.includes(product.category));
     const existing =
       product.images && product.images.length > 0
         ? product.images
@@ -102,6 +133,36 @@ export default function AdminProducts() {
     setNewImageFiles([]);
     setNewImagePreviews([]);
     setDialogOpen(true);
+  };
+
+  const handleCategorySelect = (value: string) => {
+    if (value === NEW_CATEGORY_VALUE) {
+      setIsAddingNewCategory(true);
+      setForm((prev) => ({ ...prev, category: "" }));
+    } else {
+      setIsAddingNewCategory(false);
+      setForm((prev) => ({ ...prev, category: value }));
+    }
+  };
+
+  const handleSuggestDescription = async () => {
+    if (!form.name.trim() || !form.category.trim()) {
+      toast.error("Enter a name and category first");
+      return;
+    }
+    setIsGeneratingDescription(true);
+    try {
+      const { description } = await generateProductDescription(form.name.trim(), form.category.trim());
+      if (description) {
+        setForm((prev) => ({ ...prev, description }));
+      } else {
+        toast.error("Couldn't generate a description — try again");
+      }
+    } catch (err) {
+      toast.error("Failed to generate description");
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,14 +223,14 @@ export default function AdminProducts() {
     formData.append("description", form.description);
     formData.append("price", String(form.price));
     formData.append("stock", String(form.stock));
-    formData.append("category", form.category);
+    formData.append("category", form.category.trim());
     if (form.mrp) formData.append("mrp", form.mrp);
 
     if (editingId) {
       formData.append("existingImages", JSON.stringify(existingImages));
     }
     newImageFiles.forEach((file) => {
-      formData.append("images", file); 
+      formData.append("images", file);
     });
 
     setIsSubmitting(true);
@@ -183,6 +244,7 @@ export default function AdminProducts() {
       }
       setDialogOpen(false);
       fetchProducts();
+      fetchCategories(); // pick up a newly-added category for next time
     } catch (err) {
       toast.error(editingId ? "Failed to update product" : "Failed to create product");
     } finally {
@@ -388,7 +450,18 @@ export default function AdminProducts() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="p-description">Description</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="p-description">Description</Label>
+                <button
+                  type="button"
+                  onClick={handleSuggestDescription}
+                  disabled={isGeneratingDescription || !form.name.trim() || !form.category.trim()}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {isGeneratingDescription ? "Generating..." : "Suggest with AI"}
+                </button>
+              </div>
               <textarea
                 id="p-description"
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -437,12 +510,50 @@ export default function AdminProducts() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="p-category">Category</Label>
-                <Input
-                  id="p-category"
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  required
-                />
+
+                {!isAddingNewCategory ? (
+                  <Select
+                    value={categories.includes(form.category) ? form.category : undefined}
+                    onValueChange={handleCategorySelect}
+                  >
+                    <SelectTrigger id="p-category">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat} className="capitalize">
+                          {cat}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={NEW_CATEGORY_VALUE} className="font-medium text-primary">
+                        + Add new category
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Input
+                      id="p-category"
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      placeholder="Type new category name"
+                      required
+                      autoFocus
+                    />
+                    {categories.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingNewCategory(false);
+                          setForm((prev) => ({ ...prev, category: "" }));
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Choose from existing instead
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -50,3 +50,11 @@ export const askAssistant = async (
   const res = await axiosClient.post("/ai/assistant", { message, history });
   return res.data as AssistantResponse;
 };
+
+export const generateProductDescription = async (
+  name: string,
+  category: string
+): Promise<{ description: string }> => {
+  const res = await axiosClient.post("/ai/product-description", { name, category });
+  return res.data as { description: string };
+};

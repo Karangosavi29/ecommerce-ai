@@ -20,7 +20,8 @@ export function TopBrands() {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {/* Mobile: horizontal swipeable scroll. sm+: original grid. */}
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 no-scrollbar sm:grid sm:grid-cols-6 sm:overflow-visible sm:pb-0 sm:snap-none">
           {PLACEHOLDER_BRANDS.map((brand, i) => (
             <motion.div
               key={brand.id}
@@ -29,7 +30,7 @@ export function TopBrands() {
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.05 }}
               whileHover={{ y: -4 }}
-              className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card p-4 shadow-soft transition-shadow hover:shadow-soft-lg"
+              className="flex w-24 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card p-4 shadow-soft transition-shadow hover:shadow-soft-lg sm:w-auto sm:shrink"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">
                 {brand.initials}

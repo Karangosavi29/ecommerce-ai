@@ -22,7 +22,8 @@ export function CustomerReviews() {
           </h2>
         </motion.div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* Mobile: horizontal swipeable scroll. sm+: original grid. */}
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 no-scrollbar sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:snap-none">
           {PLACEHOLDER_REVIEWS.map((review, i) => (
             <motion.div
               key={review.id}
@@ -30,7 +31,7 @@ export function CustomerReviews() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: i * 0.08 }}
-              className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 shadow-soft"
+              className="flex w-[85%] shrink-0 snap-start flex-col gap-3 rounded-lg border border-border bg-card p-5 shadow-soft sm:w-auto sm:shrink"
             >
               <Quote className="h-5 w-5 text-primary/40" aria-hidden="true" />
               <p className="text-sm leading-relaxed text-foreground">{review.comment}</p>
