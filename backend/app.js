@@ -18,6 +18,10 @@ import aiRouter from "./src/routes/ai.routes.js";
 import multer from "multer";
 
 const app = express();
+// Render (and most hosts) sit behind a reverse proxy.
+// Trust the proxy so Express can correctly determine the real client IP.
+// This is important for IP-based rate limiting.
+app.set("trust proxy", 1);
 
 //  Security headers
 app.use(helmetMiddleware);
