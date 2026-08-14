@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import { Toaster } from "react-hot-toast";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,9 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminHomeSections from "@/pages/admin/AdminHomeSections";
 import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AIChatButton from "./components/ai/AIChatButton";
+import ScrollToTop from "./components/shared/ScrollToTop";
+import TopLoadingBar from "@/components/shared/TopLoadingBar";
+
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuth();
@@ -43,6 +47,8 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
+      <TopLoadingBar />
       <Toaster position="top-center" />
       <AIChatButton />
       <Routes>

@@ -13,7 +13,6 @@ import { ImageGallery } from "@/components/product/ImageGallery";
 import { ShareWishlistBar } from "@/components/product/ShareWishlistBar";
 import { DeliveryEstimate } from "@/components/product/DeliveryEstimate";
 import { PaymentOptionsPanel } from "@/components/product/PaymentOptionsPanel";
-import { FinancingOptions } from "@/components/product/FinancingOptions";
 import { WhyBuyFromUs } from "@/components/product/WhyBuyFromUs";
 import { WarrantyInfo } from "@/components/product/WarrantyInfo";
 import { ProductKeyDetails } from "@/components/product/ProductKeyDetails";
@@ -130,7 +129,7 @@ export default function ProductDetail() {
 
       <div className="md:flex md:items-start md:gap-8">
         {/* Images */}
-        <div className="md:w-[42%] md:shrink-0">
+        <div className="md:w-[42%] md:shrink-0 md:sticky md:top-20 md:self-start">
           <ShareWishlistBar
             productName={product.name}
             isWishlisted={isWishlisted}
@@ -262,12 +261,10 @@ export default function ProductDetail() {
               </Button>
             </div>
 
+            <ProductKeyDetails description={product.description} />
+
             <DeliveryEstimate />
             <PaymentOptionsPanel productName={product.name} price={product.price} />
-            <FinancingOptions />
-
-            {/* About this item */}
-            <ProductKeyDetails description={product.description} />
 
             <WarrantyInfo />
             <WhyBuyFromUs />

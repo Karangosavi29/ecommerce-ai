@@ -22,6 +22,7 @@ export default function Checkout() {
   const clear = useCartStore((state) => state.clear);
 
   const coupon = useCouponStore((state) => state.coupon);
+  const setCoupon = useCouponStore((state) => state.setCoupon);
   const clearCoupon = useCouponStore((state) => state.clearCoupon);
 
   const [address, setAddress] = useState<ShippingAddress>({
@@ -46,6 +47,16 @@ export default function Checkout() {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
 
+  const FIELD_LABELS: Record<keyof ShippingAddress, string> = {
+    fullName: "Full name",
+    phone: "Phone number",
+    addressLine1: "Address line 1",
+    addressLine2: "Address line 2",
+    city: "City",
+    state: "State",
+    pincode: "Pincode",
+  };
+
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
     if (!address.fullName.trim()) newErrors.fullName = "Required";
@@ -56,7 +67,20 @@ export default function Checkout() {
     if (!/^\d{6}$/.test(address.pincode)) newErrors.pincode = "Enter a valid 6-digit pincode";
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    const missingFields = Object.keys(newErrors) as (keyof ShippingAddress)[];
+    if (missingFields.length > 0) {
+      const names = missingFields.map((field) => FIELD_LABELS[field]).join(", ");
+      toast.error(`Please check: ${names}`);
+
+      // Scroll to the address form so the person can see the highlighted fields
+      document.getElementById("checkout-address-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+
+    return missingFields.length === 0;
   };
 
   const handleRazorpayCheckout = async (e: FormEvent) => {
@@ -157,11 +181,18 @@ export default function Checkout() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <AddressForm address={address} errors={errors} onChange={handleChange} />
+          <div id="checkout-address-form">
+            <AddressForm address={address} errors={errors} onChange={handleChange} />
+          </div>
           <OrderMethod isPaying={isPaying} onRazorpay={handleRazorpayCheckout} />
         </div>
 
-        <CheckoutOrderSummary items={items} subtotal={subtotal} coupon={coupon} />
+        <CheckoutOrderSummary
+          items={items}
+          subtotal={subtotal}
+          coupon={coupon}
+          onCouponChange={setCoupon}
+        />
       </div>
 
       <OrderSuccessOverlay show={showSuccess} orderId={successOrderId ?? undefined} />

@@ -19,8 +19,11 @@ const register = async ({ name, email, password, phone }) => {
     const existing = await userRepository.findByEmail(email);
     if (existing) throw new ApiError(409, "User with this email already exists");
 
-    const user = await userRepository.create({ name, email, password, phone }); // name kept as-typed, no forced lowercase
-    return userRepository.findByIdSafe(user._id);
+    const created = await userRepository.create({ name, email, password, phone });
+    const { accessToken, refreshToken } = await generateAndStoreTokens(created._id);
+    const safeUser = await userRepository.findByIdSafe(created._id);
+
+    return { user: safeUser, accessToken, refreshToken };
 };
 
 const login = async (email, password) => {

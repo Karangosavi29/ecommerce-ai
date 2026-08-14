@@ -1,4 +1,4 @@
-import { CreditCard, MessageCircle, Landmark, Check } from "lucide-react";
+import { CreditCard, MessageCircle, Landmark, Check, FileCheck } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { buildWhatsAppUrl } from "@/config/contact";
 import { buildProductEnquiryMessage } from "@/components/product/buildProductEnquiryMessage";
@@ -16,6 +16,20 @@ const WHATSAPP_HELP_ITEMS = [
     "EMI guidance",
 ];
 
+const FINANCE_PARTNERS = [
+    { name: "Bajaj Finance", note: "Flexible EMI plans" },
+    { name: "Kotak Finance", note: "Easy approval process" },
+];
+
+const APPLY_STEPS = [
+    "Visit our store",
+    "Select your product",
+    "Complete finance verification",
+    "Take your product home",
+];
+
+const REQUIRED_DOCS = ["ID Proof", "Address Proof", "Required documents"];
+
 export function PaymentOptionsPanel({ productName, price }: PaymentOptionsPanelProps) {
     const whatsappUrl = buildWhatsAppUrl(
         buildProductEnquiryMessage({ productName, price })
@@ -25,9 +39,9 @@ export function PaymentOptionsPanel({ productName, price }: PaymentOptionsPanelP
         <div className="rounded-lg border border-border bg-card p-4">
             <p className="mb-3 text-sm font-semibold text-foreground">Payment Options</p>
 
-            <div className="space-y-3">
-                {/* Pay Online — informational; the actual payment happens at Checkout */}
-                <div className="flex gap-3 rounded-md border border-border p-3">
+            <div className="divide-y divide-border">
+                {/* Pay Online */}
+                <div className="flex gap-3 py-3 first:pt-0">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <CreditCard className="h-4.5 w-4.5" />
                     </span>
@@ -39,8 +53,8 @@ export function PaymentOptionsPanel({ productName, price }: PaymentOptionsPanelP
                     </div>
                 </div>
 
-                {/* WhatsApp pre-sale enquiry — real wa.me link, no COD claim */}
-                <div className="flex gap-3 rounded-md border border-border p-3">
+                {/* WhatsApp pre-sale enquiry */}
+                <div className="flex gap-3 py-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
                         <MessageCircle className="h-4.5 w-4.5" />
                     </span>
@@ -81,19 +95,53 @@ export function PaymentOptionsPanel({ productName, price }: PaymentOptionsPanelP
                     </div>
                 </div>
 
-                {/* EMI — real in-store service, no online integration implied */}
-                <div className="flex gap-3 rounded-md border border-border p-3">
+                {/* EMI — merged FinancingOptions content */}
+                <div className="flex gap-3 py-3 last:pb-0">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning">
                         <Landmark className="h-4.5 w-4.5" />
                     </span>
-                    <div>
+                    <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">EMI Available</p>
                         <p className="text-xs text-muted-foreground">
                             Buy on easy monthly installments. Available through Bajaj Finance and Kotak Finance.
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Visit our store for EMI eligibility and documentation.
+
+                        <p className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Finance Partners
                         </p>
+                        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                            {FINANCE_PARTNERS.map((partner) => (
+                                <div
+                                    key={partner.name}
+                                    className="rounded-md border border-border bg-background px-3 py-2"
+                                >
+                                    <p className="text-sm font-medium text-foreground">{partner.name}</p>
+                                    <p className="text-xs text-muted-foreground">{partner.note}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            How to Apply
+                        </p>
+                        <ol className="mb-3 space-y-1.5">
+                            {APPLY_STEPS.map((step, i) => (
+                                <li key={step} className="flex items-center gap-2 text-sm text-foreground">
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                        {i + 1}
+                                    </span>
+                                    {step}
+                                </li>
+                            ))}
+                        </ol>
+
+                        <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3">
+                            <FileCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div>
+                                <p className="text-xs font-semibold text-foreground">Bring with you:</p>
+                                <p className="text-xs text-muted-foreground">{REQUIRED_DOCS.join(" · ")}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -18,33 +18,35 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     id: "s1",
-    eyebrow: "New season",
-    title: "Upgrade your setup for less",
-    subtitle: "Fresh arrivals across mobiles, laptops and audio.",
-    ctaLabel: "Shop New Arrivals",
-    ctaHref: "/?sort=new",
+    eyebrow: "Trusted Local Store",
+    title: "The right product. The right guidance. The right support.",
+    subtitle:
+      "Shop genuine products with confidence, get honest guidance from our team, and visit our store whenever you need us.",
+    ctaLabel: "Shop With Confidence",
+    ctaHref: "/",
     gradient: "from-blue-600 via-blue-500 to-indigo-500",
   },
   {
     id: "s2",
-    eyebrow: "Trusted checkout",
-    title: "Secure payments, fast delivery",
-    subtitle: "Razorpay-secured checkout with real-time order tracking.",
-    ctaLabel: "Start Shopping",
-    ctaHref: "/",
+    eyebrow: "Real People. Real Support.",
+    title: "We're here when you need us.",
+    subtitle:
+      "From choosing the right product to setup, service and support after your purchase, our team is here to help.",
+    ctaLabel: "Visit Our Store",
+    ctaHref: "#store",
     gradient: "from-slate-800 via-slate-700 to-slate-600",
   },
   {
     id: "s3",
-    eyebrow: "Every category",
-    title: "Everything electronic, one store",
-    subtitle: "Browse curated picks across every category we carry.",
-    ctaLabel: "Explore Categories",
-    ctaHref: "#categories",
+    eyebrow: "More Than A Purchase",
+    title: "Buy from people you can come back to.",
+    subtitle:
+      "Shop online or visit us in person. Get genuine products, personal assistance and local after-sales support.",
+    ctaLabel: "Explore Products",
+    ctaHref: "/",
     gradient: "from-indigo-600 via-violet-500 to-blue-500",
   },
 ];
-
 const AUTO_ADVANCE_MS = 6000;
 
 export function HeroBanner() {

@@ -4,8 +4,14 @@ import authService from "../services/auth.service.js";
 import { getCookieOptions } from "../utils/cookieOptions.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-    const user = await authService.register(req.body);
-    return res.status(201).json(new ApiResponse(201, { user }, "User registered successfully"));
+    const { user, accessToken, refreshToken } = await authService.register(req.body);
+    const options = getCookieOptions();
+
+    return res
+        .status(201)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(201, { user }, "User registered successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {

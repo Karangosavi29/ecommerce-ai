@@ -1,3 +1,4 @@
+import { CouponInput } from "@/components/cart/CouponInput";
 import type { CartItem } from "@/types";
 
 interface AppliedCoupon {
@@ -9,12 +10,18 @@ interface CheckoutOrderSummaryProps {
   items: CartItem[];
   subtotal: number;
   coupon?: AppliedCoupon | null;
+  onCouponChange: (coupon: AppliedCoupon | null) => void;
 }
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const FLAT_SHIPPING_ESTIMATE = 50;
 
-export function CheckoutOrderSummary({ items, subtotal, coupon }: CheckoutOrderSummaryProps) {
+export function CheckoutOrderSummary({
+  items,
+  subtotal,
+  coupon,
+  onCouponChange,
+}: CheckoutOrderSummaryProps) {
   const shippingEstimate = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_ESTIMATE;
   const discount = coupon?.discountAmount ?? 0;
   const total = subtotal + shippingEstimate - discount;
@@ -41,6 +48,10 @@ export function CheckoutOrderSummary({ items, subtotal, coupon }: CheckoutOrderS
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 border-t border-border pt-4">
+        <CouponInput orderValue={subtotal} onPreview={onCouponChange} />
       </div>
 
       <div className="mt-4 space-y-2 border-t border-border pt-4">
