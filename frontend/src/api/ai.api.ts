@@ -58,3 +58,16 @@ export const generateProductDescription = async (
   const res = await axiosClient.post("/ai/product-description", { name, category });
   return res.data as { description: string };
 };
+
+export interface ProductSpecification {
+  key: string;
+  value: string;
+}
+
+export const generateProductSpecifications = async (
+  name: string,
+  category: string
+): Promise<{ specifications: ProductSpecification[] }> => {
+  const res = await axiosClient.post("/ai/product-specifications", { name, category });
+  return res.data as { specifications: ProductSpecification[] };
+};

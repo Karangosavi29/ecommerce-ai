@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { aiSearch, aiAssistant, aiProductDescription } from "../controllers/ai.controller.js";
+import { aiSearch, aiAssistant, aiProductDescription, aiProductSpecifications } from "../controllers/ai.controller.js";
 import { validateAISearch, validateAIAssistant } from "../validators/ai.validator.js";
 import { aiInputGuard } from "../middleware/aiInputGuard.middleware.js";
 import { verifyJWT, adminOnly } from "../middleware/auth.middleware.js";
@@ -62,6 +62,15 @@ router.post(
   aiLimiter,
   aiInputGuard("name"),
   aiProductDescription
+);
+
+router.post(
+  "/product-specifications",
+  verifyJWT,
+  adminOnly,
+  aiLimiter,
+  aiInputGuard("name"),
+  aiProductSpecifications
 );
 
 export default router;

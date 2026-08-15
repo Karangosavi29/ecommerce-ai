@@ -1,9 +1,8 @@
 import { createChatCompletion } from "../utils/openai.js";
 import { buildSearchSystemPrompt } from "./prompts/search.prompt.js";
-import { buildAssistantSystemPrompt } from "./prompts/assistant.prompt.js";
+import { buildAssistantSystemPrompt, buildSpecsSystemPrompt } from "./prompts/assistant.prompt.js";
 import productService from "./product.service.js";
 import { ApiError } from "../utils/ApiError.js";
-
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 12;
@@ -132,13 +131,14 @@ export const runProductAssistant = async (message, history = []) => {
 
 export const generateProductDescription = async ({ name, category }) => {
   const systemPrompt = [
-    "You write product detail content for an e-commerce listing.",
-    "Given only a product name and category, output 4-6 short benefit-focused lines, one per line, plain text.",
-    "Each line should be a standalone phrase or short sentence (like a spec-sheet bullet), NOT connected into paragraphs.",
+    "You write the 'About this item' section for an e-commerce product listing, in the style of Amazon's detailed item description.",
+    "Given only a product name and category, output 5-8 lines, one per line, plain text.",
+    "Mix short benefit-focused lines with a few more detailed technical or descriptive lines, like a real Amazon 'About this item' section — not just short marketing bullets.",
+    "Each line should be a standalone phrase or sentence, NOT connected into paragraphs.",
     "No markdown, no bullet symbols like '-' or '*', no numbering, no headers, no emojis — just the plain text of each line, separated by newlines.",
-    "Do not invent specific technical specifications (exact capacity numbers, model-specific certifications, exact measurements) you cannot know for certain from the name alone.",
-    "If the product name itself contains a spec (e.g. '55-inch', '7kg', '256GB'), you may reference it naturally in one line.",
-    "Keep every line general, honest, and appealing — about the experience or benefit, not fabricated facts.",
+    "You may reference specifics that are explicitly present in the product name (e.g. '55-inch', '7kg', '256GB', 'Ryzen 5') naturally within a line.",
+    "Do not invent specific technical specifications, certifications, or exact measurements you cannot know for certain from the name alone.",
+    "Keep every line honest and appealing — about the experience, benefit, or a real detail from the name — not fabricated facts.",
   ].join(" ");
 
   const userPrompt = `Product name: ${name}\nCategory: ${category}`;
@@ -147,11 +147,31 @@ export const generateProductDescription = async ({ name, category }) => {
     systemPrompt,
     userPrompt,
     json: false,
-    maxTokens: 220,
+    maxTokens: 320,
   });
 
   return typeof description === "string" ? description.trim() : "";
 };
+
+
+export const generateProductSpecifications = async ({ name, category }) => {
+  const systemPrompt = buildSpecsSystemPrompt();
+  const userPrompt = `Product name: ${name}\nCategory: ${category}`;
+
+  const result = await createChatCompletion({
+    systemPrompt,
+    userPrompt,
+    json: true,
+    maxTokens: 500,
+  });
+
+  const specs = Array.isArray(result?.specifications) ? result.specifications : [];
+
+  return specs.filter(
+    (s) => s && typeof s.key === "string" && typeof s.value === "string" && s.key.trim() && s.value.trim()
+  );
+};
+
 
 
 const stripEmptyValues = (obj = {}) => {

@@ -55,3 +55,25 @@ export const aiProductDescription = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, { description }, "Description generated."));
 });
+
+
+// POST /api/ai/product-specifications (admin only)
+export const aiProductSpecifications = asyncHandler(async (req, res) => {
+  const { name, category } = req.body;
+
+  if (typeof name !== "string" || !name.trim()) {
+    throw new ApiError(400, "name is required.");
+  }
+  if (typeof category !== "string" || !category.trim()) {
+    throw new ApiError(400, "category is required.");
+  }
+
+  const specifications = await aiService.generateProductSpecifications({
+    name: name.trim(),
+    category: category.trim(),
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { specifications }, "Specifications generated."));
+});

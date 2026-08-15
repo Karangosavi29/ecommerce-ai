@@ -8,6 +8,7 @@ const createProductSchema = z.object({
     mrp:         z.coerce.number().min(0, "MRP cannot be negative").optional(),
     stock:       z.coerce.number().min(0).optional(),
     category:    z.string().trim().min(1, "Category is required"),
+    specifications: z.string().optional(),
 });
 
 const updateProductSchema = createProductSchema.partial().extend({

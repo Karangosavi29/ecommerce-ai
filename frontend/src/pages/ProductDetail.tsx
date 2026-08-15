@@ -18,6 +18,7 @@ import { WarrantyInfo } from "@/components/product/WarrantyInfo";
 import { ProductKeyDetails } from "@/components/product/ProductKeyDetails";
 import { ReviewsSection } from "@/components/reviews/ReviewsSection";
 import { ProductRail } from "@/components/home/ProductRail";
+import { ProductSpecsTable } from "@/components/product/ProductSpecsTable";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -25,6 +26,7 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+
   const addItem = useCartStore((state) => state.addItem);
   const isMutating = useCartStore((state) => state.isMutating);
 
@@ -37,69 +39,114 @@ export default function ProductDetail() {
   const [similar, setSimilar] = useState<Product[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
 
-  const isWishlisted = useWishlistStore((s) => (product ? s.has(product._id) : false));
+  const isWishlisted = useWishlistStore((s) =>
+    product ? s.has(product._id) : false
+  );
+
   const toggleWishlist = useWishlistStore((s) => s.toggle);
 
   useEffect(() => {
     if (!id) return;
+
     setIsLoading(true);
     setNotFound(false);
 
     getProductById(id)
       .then((res) => {
         const p = res.data.product ?? res.data;
+
         setProduct(p);
         setQuantity(1);
         recordProductView(p._id);
       })
-      .catch(() => setNotFound(true))
-      .finally(() => setIsLoading(false));
+      .catch(() => {
+        setNotFound(true);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [id]);
 
   useEffect(() => {
     if (!product?.category) return;
+
     setSimilarLoading(true);
+
     getProducts({ category: product.category })
       .then((res) => {
         const list: Product[] = res.data.products ?? res.data ?? [];
-        setSimilar(list.filter((p) => p._id !== product._id).slice(0, 8));
+
+        setSimilar(
+          list
+            .filter((p) => p._id !== product._id)
+            .slice(0, 8)
+        );
       })
-      .catch(() => setSimilar([]))
-      .finally(() => setSimilarLoading(false));
+      .catch(() => {
+        setSimilar([]);
+      })
+      .finally(() => {
+        setSimilarLoading(false);
+      });
   }, [product?.category, product?._id]);
 
   const requireAuthOrRedirect = () => {
     if (isAuthenticated) return true;
+
     toast.error("Please log in to continue");
-    navigate("/login", { state: { from: { pathname: `/products/${id}` } } });
+
+    navigate("/login", {
+      state: {
+        from: {
+          pathname: `/products/${id}`,
+        },
+      },
+    });
+
     return false;
   };
 
   const handleAddToCart = async () => {
     if (!requireAuthOrRedirect() || !product) return;
+
     await addItem(product._id, quantity);
   };
 
   const handleBuyNow = async () => {
     if (!requireAuthOrRedirect() || !product) return;
+
     setIsBuyingNow(true);
+
     const ok = await addItem(product._id, quantity);
+
     setIsBuyingNow(false);
-    if (ok) navigate("/checkout");
+
+    if (ok) {
+      navigate("/checkout");
+    }
   };
 
   const handleWishlist = () => {
     if (!product) return;
+
     toggleWishlist(product._id);
   };
 
-  if (isLoading) return <Spinner fullScreen />;
+  if (isLoading) {
+    return <Spinner fullScreen />;
+  }
 
   if (notFound || !product) {
     return (
       <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 py-10">
-        <h1 className="text-xl font-semibold">Product not found</h1>
-        <Button variant="outline" onClick={() => navigate("/")}>
+        <h1 className="text-xl font-semibold">
+          Product not found
+        </h1>
+
+        <Button
+          variant="outline"
+          onClick={() => navigate("/")}
+        >
           Back to shop
         </Button>
       </div>
@@ -107,51 +154,87 @@ export default function ProductDetail() {
   }
 
   const outOfStock = product.stock <= 0;
-  const hasRating = typeof product.ratings === "number" && product.ratings > 0;
-  const hasDiscount = !!product.mrp && product.mrp > product.price;
+
+  const hasRating =
+    typeof product.ratings === "number" &&
+    product.ratings > 0;
+
+  const hasDiscount =
+    !!product.mrp &&
+    product.mrp > product.price;
+
   const discountPercent = hasDiscount
-    ? Math.round(((product.mrp! - product.price) / product.mrp!) * 100)
+    ? Math.round(
+        ((product.mrp! - product.price) / product.mrp!) * 100
+      )
     : 0;
-  const savings = hasDiscount ? product.mrp! - product.price : 0;
+
+  const savings = hasDiscount
+    ? product.mrp! - product.price
+    : 0;
 
   return (
     <div className="container py-6 sm:py-8">
+
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Home</Link>
+      <nav
+        aria-label="Breadcrumb"
+        className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        <Link
+          to="/"
+          className="hover:text-foreground"
+        >
+          Home
+        </Link>
+
         <ChevronRight className="h-3 w-3" />
-        <Link to={`/?category=${product.category}`} className="capitalize hover:text-foreground">
+
+        <Link
+          to={`/?category=${product.category}`}
+          className="capitalize hover:text-foreground"
+        >
           {product.category}
         </Link>
+
         <ChevronRight className="h-3 w-3" />
-        <span className="line-clamp-1 text-foreground">{product.name}</span>
+
+        <span className="line-clamp-1 text-foreground">
+          {product.name}
+        </span>
       </nav>
 
       <div className="md:flex md:items-start md:gap-8">
+
         {/* Images */}
-        <div className="md:w-[42%] md:shrink-0 md:sticky md:top-20 md:self-start">
+        <div className="md:sticky md:top-20 md:w-[42%] md:shrink-0 md:self-start">
           <ShareWishlistBar
             productName={product.name}
             isWishlisted={isWishlisted}
             onToggleWishlist={handleWishlist}
           />
+
           <div className="mt-2">
             <ImageGallery product={product} />
           </div>
         </div>
 
-        {/* Everything else — simple stacked flow */}
+        {/* Product Information */}
         <div className="mt-6 md:mt-0 md:min-w-0 md:flex-1">
+
           <div className="flex flex-col gap-4">
-            {/* Name */}
+
+            {/* Product Name */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 {product.category}
               </p>
+
               <h1 className="mt-1 text-2xl font-bold leading-snug text-foreground sm:text-3xl">
                 {product.name}
               </h1>
 
+              {/* Rating */}
               {hasRating && (
                 <div
                   className="mt-2.5 flex items-center gap-1.5"
@@ -168,6 +251,7 @@ export default function ProductDetail() {
                       )}
                     />
                   ))}
+
                   <span className="text-sm font-medium text-muted-foreground">
                     {(product.ratings as number).toFixed(1)}
                   </span>
@@ -175,101 +259,161 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* Price */}
-            <div>
+            {/* Price + Buy */}
+            <div className="rounded-xl border border-border bg-gradient-to-br from-card to-muted/30 p-5 shadow-soft-lg">
+
+              {/* Price */}
               <div className="flex flex-wrap items-baseline gap-2">
-                <p className="text-3xl font-bold text-foreground">
+                <p className="text-3xl font-bold text-foreground sm:text-4xl">
                   ₹{product.price.toLocaleString("en-IN")}
                 </p>
+
                 {hasDiscount && (
                   <>
                     <span className="text-base text-muted-foreground line-through">
                       ₹{product.mrp!.toLocaleString("en-IN")}
                     </span>
+
                     <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive">
                       {discountPercent}% OFF
                     </span>
                   </>
                 )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
+
+              {/* Tax */}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Inclusive of all taxes
+              </p>
+
+              {/* Savings */}
               {hasDiscount && (
                 <p className="mt-1.5 text-sm font-medium text-success">
                   You save ₹{savings.toLocaleString("en-IN")}
                 </p>
               )}
+
+              {/* Stock */}
               <p className="mt-2 text-sm">
                 {outOfStock ? (
-                  <span className="font-semibold text-destructive">Out of stock</span>
+                  <span className="font-semibold text-destructive">
+                    Out of stock
+                  </span>
                 ) : (
                   <span className="font-semibold text-success">
                     In stock ({product.stock} available)
                   </span>
                 )}
               </p>
-            </div>
 
-            {/* Quantity + buttons */}
-            {!outOfStock && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-foreground">Quantity</span>
-                <div className="flex items-center rounded-md border border-border">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-8 text-center text-sm font-medium" aria-live="polite">
-                    {quantity}
+              {/* Quantity */}
+              {!outOfStock && (
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Quantity
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-                    disabled={quantity >= product.stock}
-                    aria-label="Increase quantity"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                size="lg"
-                disabled={outOfStock || isBuyingNow}
-                onClick={handleBuyNow}
-                className="flex-1 gap-1.5"
-              >
-                <Zap className="h-4 w-4" />
-                {isBuyingNow ? "Processing..." : "Buy Now"}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={outOfStock || isMutating}
-                onClick={handleAddToCart}
-                className="flex-1 gap-1.5"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                {isMutating ? "Adding..." : "Add to Cart"}
-              </Button>
+                  <div className="flex items-center rounded-md border border-border bg-card">
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setQuantity((q) => Math.max(1, q - 1))
+                      }
+                      disabled={quantity <= 1}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+
+                    <span
+                      className="w-8 text-center text-sm font-medium"
+                      aria-live="polite"
+                    >
+                      {quantity}
+                    </span>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setQuantity((q) =>
+                          Math.min(product.stock, q + 1)
+                        )
+                      }
+                      disabled={quantity >= product.stock}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+
+                  </div>
+                </div>
+              )}
+
+              {/* Buy Buttons */}
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+
+                <Button
+                  size="lg"
+                  disabled={outOfStock || isBuyingNow}
+                  onClick={handleBuyNow}
+                  className="flex-1 gap-1.5 shadow-soft transition hover:shadow-soft-lg"
+                >
+                  <Zap className="h-4 w-4" />
+
+                  {isBuyingNow
+                    ? "Processing..."
+                    : "Buy Now"}
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  disabled={outOfStock || isMutating}
+                  onClick={handleAddToCart}
+                  className="flex-1 gap-1.5 bg-card"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+
+                  {isMutating
+                    ? "Adding..."
+                    : "Add to Cart"}
+                </Button>
+
+              </div>
             </div>
 
-            <ProductKeyDetails description={product.description} />
+            {/* Product Details */}
+            <ProductKeyDetails
+              description={product.description}
+            />
 
+            <ProductSpecsTable
+              specifications={(product as any).specifications}
+            />
+
+            {/* Delivery */}
             <DeliveryEstimate />
-            <PaymentOptionsPanel productName={product.name} price={product.price} />
 
+            {/* Payment Options */}
+            <PaymentOptionsPanel
+              productName={product.name}
+              price={product.price}
+            />
+
+            {/* Warranty */}
             <WarrantyInfo />
+
+            {/* Why Buy From Us */}
             <WhyBuyFromUs />
 
-            <ReviewsSection productId={product._id} />
+            {/* Reviews */}
+            <ReviewsSection
+              productId={product._id}
+            />
+
           </div>
         </div>
       </div>
@@ -277,9 +421,14 @@ export default function ProductDetail() {
       {/* Similar Products */}
       {(similar.length > 0 || similarLoading) && (
         <div className="mt-10 border-t border-border">
-          <ProductRail title="Similar Products" products={similar} isLoading={similarLoading} />
+          <ProductRail
+            title="Similar Products"
+            products={similar}
+            isLoading={similarLoading}
+          />
         </div>
       )}
+
     </div>
   );
 }

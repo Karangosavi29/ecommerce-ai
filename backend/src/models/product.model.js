@@ -21,6 +21,21 @@ const productSchema = new mongoose.Schema(
             min:     [0, "MRP cannot be negative"],
             default: null,
         },
+        specifications: [
+            {
+                key: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                value: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                _id: false,
+            },
+        ],
         stock: {
             type:    Number,
             required:[true, "Stock is required"],

@@ -95,9 +95,19 @@ const uploadImages = async (files) => {
     return uploads;
 };
 
-const createProduct = async ({ name, description, price, mrp, stock, category }, files) => {
+const createProduct = async ({ name, description, price, mrp, stock, category, specifications }, files) => {
     const productData = { name, description, price, stock, category };
     if (mrp !== undefined) productData.mrp = mrp;
+
+    if (specifications !== undefined) {
+        try {
+            productData.specifications = typeof specifications === "string"
+                ? JSON.parse(specifications)
+                : specifications;
+        } catch {
+            throw new ApiError(400, "Invalid specifications format");
+        }
+    }
 
     if (files && files.length > 0) {
         const images = await uploadImages(files.slice(0, MAX_IMAGES));
@@ -127,6 +137,15 @@ const updateProduct = async (id, updateData, files) => {
         }
     }
     delete data.existingImages;
+
+    if (typeof data.specifications === "string") {
+        try {
+            data.specifications = JSON.parse(data.specifications);
+        } catch {
+            throw new ApiError(400, "Invalid specifications format");
+        }
+    }
+    
 
     let newImages = [];
     if (files && files.length > 0) {

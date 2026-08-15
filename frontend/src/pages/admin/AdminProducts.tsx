@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Trash2, Plus, ImagePlus, X, Sparkles } from "lucide-react";
+import { Pencil, Trash2, Plus, ImagePlus, X, Sparkles, GripHorizontal } from "lucide-react";
 import {
   getAdminProducts,
   createProduct,
@@ -8,7 +8,7 @@ import {
   deleteProduct,
 } from "@/api/admin.api";
 import { getCategories } from "@/api/products.api";
-import { generateProductDescription } from "@/api/ai.api";
+import { generateProductDescription, generateProductSpecifications } from "@/api/ai.api";
 import Spinner from "@/components/shared/Spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,11 @@ import {
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { Product, ProductImage } from "@/types";
 
+interface SpecRow {
+  key: string;
+  value: string;
+}
+
 interface FormState {
   name: string;
   description: string;
@@ -37,6 +42,7 @@ interface FormState {
   mrp: string;
   category: string;
   stock: number;
+  specifications: SpecRow[];
 }
 
 const emptyForm: FormState = {
@@ -46,6 +52,7 @@ const emptyForm: FormState = {
   mrp: "",
   category: "",
   stock: 0,
+  specifications: [],
 };
 
 const MAX_IMAGES = 6;
@@ -64,6 +71,7 @@ export default function AdminProducts() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isGeneratingSpecs, setIsGeneratingSpecs] = useState(false);
 
   const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
@@ -118,6 +126,9 @@ export default function AdminProducts() {
       mrp: product.mrp != null ? String(product.mrp) : "",
       category: product.category,
       stock: product.stock,
+      specifications: Array.isArray((product as any).specifications)
+        ? (product as any).specifications
+        : [],
     });
     // If this product's category isn't in the fetched list yet (edge case —
     // e.g. list hasn't refreshed), fall back to the free-text input so the
@@ -163,6 +174,51 @@ export default function AdminProducts() {
     } finally {
       setIsGeneratingDescription(false);
     }
+  };
+
+  const handleSuggestSpecifications = async () => {
+    if (!form.name.trim() || !form.category.trim()) {
+      toast.error("Enter a name and category first");
+      return;
+    }
+    setIsGeneratingSpecs(true);
+    try {
+      const { specifications } = await generateProductSpecifications(
+        form.name.trim(),
+        form.category.trim()
+      );
+      if (specifications && specifications.length > 0) {
+        setForm((prev) => ({ ...prev, specifications }));
+      } else {
+        toast.error("Couldn't generate specifications — try again");
+      }
+    } catch (err) {
+      toast.error("Failed to generate specifications");
+    } finally {
+      setIsGeneratingSpecs(false);
+    }
+  };
+
+  const handleSpecChange = (index: number, field: "key" | "value", value: string) => {
+    setForm((prev) => {
+      const specifications = [...prev.specifications];
+      specifications[index] = { ...specifications[index], [field]: value };
+      return { ...prev, specifications };
+    });
+  };
+
+  const handleAddSpecRow = () => {
+    setForm((prev) => ({
+      ...prev,
+      specifications: [...prev.specifications, { key: "", value: "" }],
+    }));
+  };
+
+  const handleRemoveSpecRow = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      specifications: prev.specifications.filter((_, i) => i !== index),
+    }));
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,6 +274,10 @@ export default function AdminProducts() {
       return;
     }
 
+    const cleanSpecs = form.specifications.filter(
+      (s) => s.key.trim() && s.value.trim()
+    );
+
     const formData = new FormData();
     formData.append("name", form.name);
     formData.append("description", form.description);
@@ -225,6 +285,7 @@ export default function AdminProducts() {
     formData.append("stock", String(form.stock));
     formData.append("category", form.category.trim());
     if (form.mrp) formData.append("mrp", form.mrp);
+    formData.append("specifications", JSON.stringify(cleanSpecs));
 
     if (editingId) {
       formData.append("existingImages", JSON.stringify(existingImages));
@@ -555,6 +616,61 @@ export default function AdminProducts() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Specifications */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Specifications</Label>
+                <button
+                  type="button"
+                  onClick={handleSuggestSpecifications}
+                  disabled={isGeneratingSpecs || !form.name.trim() || !form.category.trim()}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {isGeneratingSpecs ? "Generating..." : "Generate with AI"}
+                </button>
+              </div>
+
+              {form.specifications.length > 0 && (
+                <div className="space-y-2 rounded-md border border-border p-2">
+                  {form.specifications.map((spec, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <GripHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Input
+                        placeholder="Spec name (e.g. Brand)"
+                        value={spec.key}
+                        onChange={(e) => handleSpecChange(index, "key", e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Value (e.g. Samsung)"
+                        value={spec.value}
+                        onChange={(e) => handleSpecChange(index, "value", e.target.value)}
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSpecRow(index)}
+                        aria-label="Remove specification"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAddSpecRow}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition hover:text-primary"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add specification row
+              </button>
             </div>
 
             <DialogFooter>
