@@ -23,6 +23,11 @@ const app = express();
 // This is important for IP-based rate limiting.
 app.set("trust proxy", 1);
 
+// Health check — used by uptime pingers to keep the free-tier instance warm.
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 //  Security headers
 app.use(helmetMiddleware);
 

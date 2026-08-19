@@ -18,55 +18,87 @@ const getClient = () => {
   return client;
 };
 
+// If Groq deprecates/removes the primary model, automatically fall back
+// through this list instead of the whole AI feature breaking until someone
+// notices and manually updates the model name.
+const FALLBACK_MODELS = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "llama-3.1-8b-instant",
+];
+
+const isModelNotFoundError = (error) => {
+  const errorCode = error?.error?.code || error?.code;
+  return error?.status === 404 && errorCode === "model_not_found";
+};
 
 export const createChatCompletion = async ({
   systemPrompt,
   userPrompt,
   json = true,
-  model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+  model = process.env.GROQ_MODEL || FALLBACK_MODELS[0],
   temperature = 0.2,
   maxTokens = 600,
 }) => {
   const openai = getClient(); // throws a clean 503 here if unconfigured
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model,
-      temperature,
-      max_tokens: maxTokens,
-      response_format: json ? { type: "json_object" } : undefined,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
+  const modelsToTry = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  let lastError;
 
-    const content = completion.choices?.[0]?.message?.content ?? "";
-    return json ? safeJsonParse(content) : content;
-  } catch (error) {
-    if (error.statusCode === 503) throw error; // our own "not configured" error, pass through
+  for (const currentModel of modelsToTry) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: currentModel,
+        temperature,
+        max_tokens: maxTokens,
+        response_format: json ? { type: "json_object" } : undefined,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
 
-    const errorCode = error?.error?.code || error?.code;
-    let message = "AI service failed to process the request.";
-    let statusCode = 502;
+      if (currentModel !== model) {
+        console.warn(`[openai.js] Model "${model}" failed — served request with fallback "${currentModel}" instead.`);
+      }
 
-    if (errorCode === "insufficient_quota" || errorCode === "rate_limit_exceeded") {
-      message =
-        errorCode === "insufficient_quota"
-          ? "AI provider has no available quota. Check the Groq account's usage/limits."
-          : "AI service is currently rate-limited. Please try again shortly.";
-      statusCode = 429;
-    } else if (error?.status === 429) {
-      message = "AI service is currently rate-limited. Please try again shortly.";
-      statusCode = 429;
+      const content = completion.choices?.[0]?.message?.content ?? "";
+      return json ? safeJsonParse(content) : content;
+    } catch (error) {
+      if (error.statusCode === 503) throw error; // our own "not configured" error, pass through
+
+      lastError = error;
+
+      // Only fall through to the next model on a "model not found" error.
+      // Any other error (rate limit, quota, bad request) should surface
+      // immediately rather than silently retrying with a different model.
+      if (!isModelNotFoundError(error)) break;
     }
-
-    const err = new Error(message);
-    err.statusCode = statusCode;
-    err.isOperational = true;
-    err.cause = error;
-    throw err;
   }
+
+  const error = lastError;
+  const errorCode = error?.error?.code || error?.code;
+  let message = "AI service failed to process the request.";
+  let statusCode = 502;
+
+  if (errorCode === "insufficient_quota" || errorCode === "rate_limit_exceeded") {
+    message =
+      errorCode === "insufficient_quota"
+        ? "AI provider has no available quota. Check the Groq account's usage/limits."
+        : "AI service is currently rate-limited. Please try again shortly.";
+    statusCode = 429;
+  } else if (error?.status === 429) {
+    message = "AI service is currently rate-limited. Please try again shortly.";
+    statusCode = 429;
+  } else if (isModelNotFoundError(error)) {
+    message = "AI service is temporarily unavailable (no working model). Please try again shortly.";
+  }
+
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  err.isOperational = true;
+  err.cause = error;
+  throw err;
 };
 
 const safeJsonParse = (text) => {
