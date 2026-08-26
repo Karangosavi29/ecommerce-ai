@@ -29,6 +29,7 @@ import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AIChatButton from "./components/ai/AIChatButton";
 import ScrollToTop from "./components/shared/ScrollToTop";
 import TopLoadingBar from "@/components/shared/TopLoadingBar";
+import Wishlist from "@/pages/Wishlist";
 
 
 function App() {
@@ -65,6 +66,7 @@ function App() {
           <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
         </Route>
 
         {/* Admin panel — its own sidebar layout, no storefront Navbar/Footer */}

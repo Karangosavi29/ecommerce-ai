@@ -96,7 +96,11 @@ export default function Navbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-1">
-          <Link to="/?tab=wishlist" aria-label={`Wishlist, ${wishlistCount} items`} className="relative hidden sm:block">
+          <Link
+            to="/wishlist"
+            className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium hover:bg-accent"
+            onClick={() => setMobileOpen(false)}
+          >
             <Button variant="ghost" size="icon">
               <Heart className="h-5 w-5" />
             </Button>
