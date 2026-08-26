@@ -33,6 +33,8 @@ export interface AssistantResponse {
   message: string;
   needsMoreInfo: boolean;
   products: Product[];
+  state?: AssistantState;
+  quickReplies?: QuickReply[];
 }
 
 export const aiSearch = async (
@@ -43,13 +45,6 @@ export const aiSearch = async (
   return res.data as AISearchResponse;
 };
 
-export const askAssistant = async (
-  message: string,
-  history: AssistantTurn[] = []
-): Promise<AssistantResponse> => {
-  const res = await axiosClient.post("/ai/assistant", { message, history });
-  return res.data as AssistantResponse;
-};
 
 export const generateProductDescription = async (
   name: string,
@@ -70,4 +65,30 @@ export const generateProductSpecifications = async (
 ): Promise<{ specifications: ProductSpecification[] }> => {
   const res = await axiosClient.post("/ai/product-specifications", { name, category });
   return res.data as { specifications: ProductSpecification[] };
+};
+
+
+export interface AssistantState {
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  features?: string[];
+  awaiting?: "budget" | "broaden_budget" | "category" | "confirmation" | null;
+  lastSearchHadResults?: boolean;
+}
+
+export interface QuickReply {
+  label: string;
+  value: string;
+}
+
+
+
+export const askAssistant = async (
+  message: string,
+  history: AssistantTurn[] = [],
+  state: AssistantState = {}
+): Promise<AssistantResponse> => {
+  const res = await axiosClient.post("/ai/assistant", { message, history, state });
+  return res.data as AssistantResponse;
 };

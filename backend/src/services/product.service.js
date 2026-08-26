@@ -25,12 +25,12 @@ const listProducts = async ({ search, category, minPrice, maxPrice, page, limit 
     const filter = { isActive: true };
 
     if (search) {
-        const safeSearch = escapeRegex(search.trim());
-        filter.$or = [
-            { name: { $regex: safeSearch, $options: "i" } },
-            { description: { $regex: safeSearch, $options: "i" } },
-            { category: { $regex: safeSearch, $options: "i" } },
-        ];
+        const searchWords = search.trim().split(/\s+/).filter(Boolean).map(escapeRegex);
+        filter.$or = searchWords.flatMap((word) => [
+            { name: { $regex: word, $options: "i" } },
+            { description: { $regex: word, $options: "i" } },
+            { category: { $regex: word, $options: "i" } },
+        ]);
     }
 
     if (category) filter.category = category.toLowerCase();

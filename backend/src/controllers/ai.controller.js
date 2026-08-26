@@ -19,20 +19,18 @@ export const aiSearch = asyncHandler(async (req, res) => {
 
 // POST /api/ai/assistant
 export const aiAssistant = asyncHandler(async (req, res) => {
-  const { message, history } = req.body;
+  const { message, history, state } = req.body;
 
   if (history && !Array.isArray(history)) {
     throw new ApiError(400, "history must be an array of { role, content } turns.");
   }
 
-  const { message: reply, needsMoreInfo, products } = await aiService.runProductAssistant(
-    message,
-    history || []
-  );
+  const { message: reply, needsMoreInfo, products, state: newState, quickReplies } =
+    await aiService.runProductAssistant(message, history || [], state || {});
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { message: reply, needsMoreInfo, products }, "Assistant responded."));
+    .json(new ApiResponse(200, { message: reply, needsMoreInfo, products, state: newState, quickReplies }, "Assistant responded."));
 });
 
 // POST /api/ai/product-description (admin only)

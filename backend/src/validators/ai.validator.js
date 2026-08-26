@@ -1,6 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 
 const MAX_TEXT_LENGTH = 500;
+const VALID_AWAITING = ["budget", "broaden_budget", "category", "confirmation"];
 
 export const validateAISearch = (req, res, next) => {
   const { query, page, limit } = req.body;
@@ -30,7 +31,7 @@ export const validateAISearch = (req, res, next) => {
 };
 
 export const validateAIAssistant = (req, res, next) => {
-  const { message, history } = req.body;
+  const { message, history, state } = req.body;
 
   if (typeof message !== "string" || !message.trim()) {
     throw new ApiError(400, "message is required and must be a non-empty string.");
@@ -58,6 +59,27 @@ export const validateAIAssistant = (req, res, next) => {
           throw new ApiError(400, `history[].content must be under ${MAX_TEXT_LENGTH} characters.`);
         }
       }
+    }
+  }
+
+  if (state !== undefined) {
+    if (typeof state !== "object" || state === null || Array.isArray(state)) {
+      throw new ApiError(400, "state must be an object.");
+    }
+    if (state.category !== undefined && typeof state.category !== "string") {
+      throw new ApiError(400, "state.category must be a string.");
+    }
+    if (state.minPrice !== undefined && (typeof state.minPrice !== "number" || state.minPrice < 0)) {
+      throw new ApiError(400, "state.minPrice must be a non-negative number.");
+    }
+    if (state.maxPrice !== undefined && (typeof state.maxPrice !== "number" || state.maxPrice < 0)) {
+      throw new ApiError(400, "state.maxPrice must be a non-negative number.");
+    }
+    if (state.features !== undefined && !Array.isArray(state.features)) {
+      throw new ApiError(400, "state.features must be an array.");
+    }
+    if (state.awaiting !== undefined && state.awaiting !== null && !VALID_AWAITING.includes(state.awaiting)) {
+      throw new ApiError(400, `state.awaiting must be one of: ${VALID_AWAITING.join(", ")}, or null.`);
     }
   }
 

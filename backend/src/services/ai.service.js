@@ -23,13 +23,15 @@ const extractFiltersAndFetchProducts = async (text, { page = DEFAULT_PAGE, limit
   let extracted = {};
   try {
     extracted = await createChatCompletion({ systemPrompt, userPrompt: text, json: true });
-  } catch {
+    if (!extracted || Object.keys(extracted).length === 0) {
+      extracted = await createChatCompletion({ systemPrompt, userPrompt: text, json: true });
+    }
+  } catch (err) {
     extracted = {};
   }
 
   const filters = stripEmptyValues(extracted);
   const listParams = mapAIFiltersToListProducts(filters, { page, limit });
-
   const { products, pagination, appliedParams } = await fetchProductsWithFallback(filters, listParams);
 
   return { filters, appliedFilters: appliedParams, products, pagination };
@@ -68,7 +70,7 @@ const fetchProductsWithFallback = async (filters, listParams) => {
 
 const mapAIFiltersToListProducts = (filters, { page, limit }) => {
   const searchParts = [
-    filters.keyword,
+    filters.category ? null : filters.keyword,
     filters.brand,
     filters.color,
     filters.size,
@@ -92,19 +94,91 @@ export const searchProductsWithAI = async (query, { page, limit } = {}) => {
 };
 
 
-export const runProductAssistant = async (message, history = []) => {
-  const recentUserText = [
-    ...history.filter((h) => h.role === "user").map((h) => h.content),
-    message,
-  ]
-    .slice(-4)
-    .join("\n");
+const BUDGET_QUICK_REPLY_RE = /set my budget to\s*₹?\s*([\d,]+)/i;
 
-  const { products: candidateProducts } = await extractFiltersAndFetchProducts(recentUserText, {
-    page: DEFAULT_PAGE,
-    limit: ASSISTANT_CANDIDATE_LIMIT,
-  });
+const parseQuickBudgetReply = (text) => {
+  const match = text.match(BUDGET_QUICK_REPLY_RE);
+  if (!match) return null;
+  const value = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(value) ? value : null;
+};
 
+const mergeState = (prevState = {}, filters = {}) => {
+  const merged = { ...prevState };
+  if (filters.category) merged.category = filters.category;
+  if (filters.minPrice !== undefined && filters.minPrice !== null) merged.minPrice = filters.minPrice;
+  if (filters.maxPrice !== undefined && filters.maxPrice !== null) merged.maxPrice = filters.maxPrice;
+  if (filters.features && filters.features.length) merged.features = filters.features;
+  return merged;
+};
+
+const BUDGET_SUGGESTIONS = [20000, 30000, 50000, 100000];
+
+export const runProductAssistant = async (message, history = [], state = {}) => {
+  const trimmed = message.trim();
+
+  // 1. User tapped a "yes" quick reply while we were waiting on a broadened budget.
+  if (trimmed.toLowerCase() === "yes" && state.awaiting === "broaden_budget") {
+    return {
+      message: "Sure! What budget would you like to try?",
+      needsMoreInfo: true,
+      products: [],
+      state: { ...state, awaiting: "budget" },
+      quickReplies: BUDGET_SUGGESTIONS.map((amount) => ({
+        label: `₹${(amount / 1000).toFixed(0)}K`,
+        value: `Set my budget to ₹${amount.toLocaleString("en-IN")}`,
+      })),
+    };
+  }
+
+  // 2. User tapped a budget quick-reply button — parse directly, skip the
+  // extraction AI call entirely (deterministic, no Groq round-trip needed).
+  const quickBudget = parseQuickBudgetReply(trimmed);
+  let mergedState = state;
+  let candidateProducts = [];
+
+  if (quickBudget !== null) {
+    mergedState = mergeState(state, { maxPrice: quickBudget });
+    const listParams = mapAIFiltersToListProducts(mergedState, {
+      page: DEFAULT_PAGE,
+      limit: ASSISTANT_CANDIDATE_LIMIT,
+    });
+    const result = await fetchProductsWithFallback(mergedState, listParams);
+    candidateProducts = result.products;
+  } else {
+    // 3. Normal turn — extract intent via AI, merge with prior known state.
+    const recentUserText = [
+      ...history.filter((h) => h.role === "user").map((h) => h.content),
+      message,
+    ]
+      .slice(-4)
+      .join("\n");
+
+    const { filters, products } = await extractFiltersAndFetchProducts(recentUserText, {
+      page: DEFAULT_PAGE,
+      limit: ASSISTANT_CANDIDATE_LIMIT,
+    });
+
+    mergedState = mergeState(state, filters);
+    candidateProducts = products;
+  }
+
+  // 4. Deterministic no-match + broaden-budget path — skip the second AI
+  // call entirely when we already know exactly why there's nothing to show.
+  if (candidateProducts.length === 0 && mergedState.maxPrice) {
+    return {
+      message: `I couldn't find a match under ₹${mergedState.maxPrice.toLocaleString("en-IN")}.\n\nWould you like to increase your budget?`,
+      needsMoreInfo: false,
+      products: [],
+      state: { ...mergedState, awaiting: "broaden_budget", lastSearchHadResults: false },
+      quickReplies: BUDGET_SUGGESTIONS.filter((a) => a > mergedState.maxPrice).map((amount) => ({
+        label: `₹${(amount / 1000).toFixed(0)}K`,
+        value: `Set my budget to ₹${amount.toLocaleString("en-IN")}`,
+      })),
+    };
+  }
+
+  // 5. Normal explain/recommend step (existing behavior).
   const systemPrompt = buildAssistantSystemPrompt(candidateProducts);
   const conversationPrompt = [
     ...history.map((h) => `${h.role}: ${h.content}`),
@@ -115,6 +189,7 @@ export const runProductAssistant = async (message, history = []) => {
     systemPrompt,
     userPrompt: conversationPrompt,
     json: true,
+    maxTokens: 1000,
   });
 
   const recommendedIds = new Set(result.recommendedProductIds || []);
@@ -126,6 +201,12 @@ export const runProductAssistant = async (message, history = []) => {
     message: result.reply,
     needsMoreInfo: Boolean(result.needsMoreInfo),
     products: recommendedProducts,
+    state: {
+      ...mergedState,
+      awaiting: Boolean(result.needsMoreInfo) ? "budget" : null,
+      lastSearchHadResults: recommendedProducts.length > 0,
+    },
+    quickReplies: undefined,
   };
 };
 
