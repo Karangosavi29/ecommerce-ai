@@ -1,5 +1,4 @@
-
-export const WHATSAPP_NUMBER = "";
+export const WHATSAPP_NUMBER = "917038188599";
 
 export function buildWhatsAppUrl(message: string): string | null {
   if (!WHATSAPP_NUMBER) {

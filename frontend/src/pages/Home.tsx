@@ -28,10 +28,11 @@ import { FlashSaleCountdown } from "@/components/home/FlashSaleCountdown";
 import { TopBrands } from "@/components/home/TopBrands";
 import { CustomerReviews } from "@/components/home/CustomerReviews";
 import { Newsletter } from "@/components/home/Newsletter";
+import { AIFinderBanner } from "@/components/home/AIFinderBanner";
+
+import { WhyBuyFromUs } from "@/components/product/WhyBuyFromUs";
 
 import { useRecentlyViewedIds } from "@/hooks/useRecentlyViewed";
-
-import FloatingAIProductAssistant from "@/components/ai/FloatingAIProductAssistant";
 
 import type { Product } from "@/types";
 
@@ -185,6 +186,9 @@ export default function Home() {
       });
     }, 50);
   };
+  const scrollToShop = useCallback(() => {
+    shopGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const newArrivals = useMemo(() => {
     const withDates = allProducts.filter(
@@ -250,7 +254,10 @@ export default function Home() {
         isLoading={isSectionsLoading}
         headerAccessory={<FlashSaleCountdown />}
         emptyMessage="No deals right now — check back soon."
+        onViewAll={scrollToShop}
       />
+
+      <AIFinderBanner />
 
       <div className="border-t border-border bg-card/40">
         <ProductRail
@@ -259,10 +266,28 @@ export default function Home() {
           products={curatedSections.featured}
           isLoading={isSectionsLoading}
           emptyMessage="Nothing featured yet — check back soon."
+          onViewAll={scrollToShop}
         />
       </div>
 
       <TopBrands />
+
+      <section className="border-t border-border py-10 sm:py-12">
+        <div className="container">
+          <div className="mb-6 text-center sm:mb-8">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+              Our Promise
+            </p>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Why Shop With GIRI Electronics?
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Buy from people you can come back to.
+            </p>
+          </div>
+          <WhyBuyFromUs size="lg" />
+        </div>
+      </section>
 
       <ProductRail
         eyebrow="Popular"
@@ -270,6 +295,7 @@ export default function Home() {
         products={curatedSections.bestSellers}
         isLoading={isSectionsLoading}
         emptyMessage="No best sellers picked yet — check back soon."
+        onViewAll={scrollToShop}
       />
 
       <div className="border-t border-border bg-card/40">
@@ -485,11 +511,9 @@ export default function Home() {
 
                 <Button
                   onClick={() => {
-                    document
-                      .querySelector("[data-ai-assistant]")
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                      });
+                    // FloatingAIProductAssistant is `fixed`-position, so scrolling to its
+                    // wrapper has no visible effect — open it directly instead.
+                    window.dispatchEvent(new CustomEvent("open-ai-assistant"));
                   }}
                   className="rounded-full"
                 >
@@ -524,9 +548,6 @@ export default function Home() {
       </section>
 
       <Newsletter />
-      <div data-ai-assistant>
-        <FloatingAIProductAssistant />
-      </div>
     </div>
   );
 }

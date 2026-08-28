@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, Eye, Star } from "lucide-react";
+import { Heart, Eye, Star, ShoppingCart, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import useWishlistStore from "@/store/wishlistStore";
+import useCartStore from "@/store/cartStore";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -24,9 +25,13 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
   const outOfStock = stock <= 0;
   const hasDiscount = !!mrp && mrp > price;
   const discountPercent = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0;
+  const savings = hasDiscount ? mrp! - price : 0;
 
   const isWishlisted = useWishlistStore((s) => s.has(_id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
+
+  const addItem = useCartStore((s) => s.addItem);
+  const isMutating = useCartStore((s) => s.isMutating);
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,13 +45,20 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
     onQuickView?.(product);
   };
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (outOfStock || isMutating) return;
+    addItem(_id, 1);
+  };
+
   return (
     <motion.div
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 24 }}
       className="h-full"
     >
-      <Card className="group flex h-full flex-col overflow-hidden rounded-lg border-border shadow-soft transition-shadow duration-300 hover:shadow-soft-lg">
+      <Card className="group flex h-full flex-col overflow-hidden rounded-[14px] border-border shadow-soft transition-shadow duration-300 hover:shadow-soft-lg">
         <Link
           to={`/products/${_id}`}
           className="flex h-full flex-col focus:outline-none"
@@ -126,7 +138,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {brand ?? category}
             </p>
-            <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-foreground">
+            <h3 className="line-clamp-2 min-h-[2.5rem] text-[15px] font-semibold leading-snug text-foreground">
               {name}
             </h3>
 
@@ -146,20 +158,36 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
             )}
 
             <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-              <span className="text-lg font-bold text-foreground">
+              <span className="text-xl font-bold text-foreground">
                 ₹{price.toLocaleString("en-IN")}
               </span>
               {hasDiscount && (
-                <>
-                  <span className="text-xs text-muted-foreground line-through">
-                    ₹{mrp!.toLocaleString("en-IN")}
-                  </span>
-                  <span className="text-xs font-semibold text-success">
-                    {discountPercent}% OFF
-                  </span>
-                </>
+                <span className="text-xs text-muted-foreground line-through">
+                  ₹{mrp!.toLocaleString("en-IN")}
+                </span>
               )}
             </div>
+            {hasDiscount && (
+              <span className="text-xs font-semibold text-success">
+                Save ₹{savings.toLocaleString("en-IN")}
+              </span>
+            )}
+
+            {/* Add to cart */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAddToCart}
+              disabled={outOfStock || isMutating}
+              className="mt-2 w-full gap-1.5 rounded-lg"
+            >
+              {isMutating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ShoppingCart className="h-4 w-4" />
+              )}
+              {outOfStock ? "Out of Stock" : "Add to Cart"}
+            </Button>
           </CardContent>
         </Link>
       </Card>

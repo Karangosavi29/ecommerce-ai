@@ -214,7 +214,7 @@ export default function ProductDetail() {
             onToggleWishlist={handleWishlist}
           />
 
-          <div className="mt-2">
+          <div className="mt-2 overflow-hidden rounded-[14px] border border-border bg-card">
             <ImageGallery product={product} />
           </div>
         </div>
@@ -222,7 +222,7 @@ export default function ProductDetail() {
         {/* Product Information */}
         <div className="mt-6 md:mt-0 md:min-w-0 md:flex-1">
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
 
             {/* Product Name */}
             <div>
@@ -260,7 +260,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Price + Buy */}
-            <div className="rounded-xl border border-border bg-gradient-to-br from-card to-muted/30 p-5 shadow-soft-lg">
+            <div className="rounded-[14px] border border-border bg-gradient-to-br from-card to-muted/30 p-5 shadow-soft-lg sm:p-6">
 
               {/* Price */}
               <div className="flex flex-wrap items-baseline gap-2">
@@ -294,7 +294,7 @@ export default function ProductDetail() {
               )}
 
               {/* Stock */}
-              <p className="mt-2 text-sm">
+              <p className="mt-3 text-sm">
                 {outOfStock ? (
                   <span className="font-semibold text-destructive">
                     Out of stock
@@ -313,7 +313,7 @@ export default function ProductDetail() {
                     Quantity
                   </span>
 
-                  <div className="flex items-center rounded-md border border-border bg-card">
+                  <div className="flex items-center rounded-lg border border-border bg-card">
 
                     <Button
                       variant="ghost"
@@ -328,7 +328,7 @@ export default function ProductDetail() {
                     </Button>
 
                     <span
-                      className="w-8 text-center text-sm font-medium"
+                      className="w-8 text-center text-sm font-semibold"
                       aria-live="polite"
                     >
                       {quantity}
@@ -353,13 +353,13 @@ export default function ProductDetail() {
               )}
 
               {/* Buy Buttons */}
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
 
                 <Button
                   size="lg"
                   disabled={outOfStock || isBuyingNow}
                   onClick={handleBuyNow}
-                  className="flex-1 gap-1.5 shadow-soft transition hover:shadow-soft-lg"
+                  className="flex-1 gap-1.5 rounded-lg shadow-soft transition hover:shadow-soft-lg"
                 >
                   <Zap className="h-4 w-4" />
 
@@ -373,7 +373,7 @@ export default function ProductDetail() {
                   variant="outline"
                   disabled={outOfStock || isMutating}
                   onClick={handleAddToCart}
-                  className="flex-1 gap-1.5 bg-card"
+                  className="flex-1 gap-1.5 rounded-lg bg-card"
                 >
                   <ShoppingCart className="h-4 w-4" />
 

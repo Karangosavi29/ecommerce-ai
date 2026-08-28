@@ -5,7 +5,7 @@ import { WHATSAPP_NUMBER } from "@/config/contact";
 export default function Footer() {
   return (
     <footer className="border-t border-border bg-card">
-      <div className="container py-10">
+      <div className="container pt-10 pb-24 sm:pb-10">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-lg font-extrabold tracking-tight text-foreground">
@@ -36,17 +36,17 @@ export default function Footer() {
                   We accept secure online payments through Razorpay.
                 </p>
               </div>
-              <div className="flex gap-2.5">
-                <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                <p>
-                  <span className="font-medium text-foreground">WhatsApp Orders: </span>
-                  For product enquiries, bulk orders, or payment assistance, contact our team
-                  through WhatsApp.
-                  {!WHATSAPP_NUMBER && (
-                    <span className="italic"> (contact number not yet configured)</span>
-                  )}
-                </p>
-              </div>
+              {WHATSAPP_NUMBER && (
+                <div className="flex gap-2.5">
+                  <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  <p>
+                    <span className="font-medium text-foreground">WhatsApp Orders: </span>
+                    For product enquiries, bulk orders, or payment assistance, contact our team
+                    through WhatsApp.
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-2.5">
                 <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <p>

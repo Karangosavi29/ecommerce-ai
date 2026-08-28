@@ -82,30 +82,30 @@ export default function Navbar() {
           GIRI<span className="text-primary">Electronics</span>
         </Link>
 
-        {/* Search - desktop */}
         <form onSubmit={handleSearch} className="relative hidden flex-1 max-w-xl md:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for products, brands and more"
+            placeholder="Search products, brands and more"
             aria-label="Search products"
-            className="h-10 rounded-full pl-9"
+            className="h-11 rounded-full border-border bg-muted/40 pl-10 text-sm transition-colors focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/30"
           />
         </form>
 
         <div className="ml-auto flex items-center gap-1">
           <Link
             to="/wishlist"
-            className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium hover:bg-accent"
+            aria-label={`Wishlist, ${wishlistCount} items`}
+            className="relative flex items-center rounded-md hover:bg-accent"
             onClick={() => setMobileOpen(false)}
           >
             <Button variant="ghost" size="icon">
               <Heart className="h-5 w-5" />
             </Button>
             {wishlistCount > 0 && (
-              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
                 {wishlistCount}
               </span>
             )}
@@ -116,7 +116,7 @@ export default function Navbar() {
               <ShoppingCart className="h-5 w-5" />
             </Button>
             {itemCount > 0 && (
-              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
                 {itemCount}
               </span>
             )}
@@ -216,7 +216,7 @@ export default function Navbar() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search products"
             aria-label="Search products"
-            className="h-10 rounded-full pl-9"
+            className="h-10 rounded-full border-border bg-muted/40 pl-9"
           />
         </div>
       </form>
