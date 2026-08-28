@@ -14,6 +14,15 @@ const AIChatButton = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const handleOpenRequest = () => {
+      setOpen(true);
+      setShowGreeting(false);
+    };
+    window.addEventListener("open-ai-assistant", handleOpenRequest);
+    return () => window.removeEventListener("open-ai-assistant", handleOpenRequest);
+  }, []);
+
   return (
     <>
       {/* Greeting */}
@@ -82,20 +91,28 @@ const AIChatButton = () => {
 
       {/* Chat */}
       {open && (
-        <div className="fixed bottom-4 right-4 z-50 w-[430px] max-w-[calc(100vw-24px)] animate-in fade-in slide-in-from-bottom-4 sm:bottom-5 sm:right-5">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close shopping assistant"
-              className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl bg-muted/80 text-muted-foreground shadow-sm backdrop-blur transition hover:bg-muted hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[2px]"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
 
-            <AIProductAssistant />
+          <div className="fixed bottom-4 right-4 z-50 w-[430px] max-w-[calc(100vw-24px)] animate-in fade-in slide-in-from-bottom-4 sm:bottom-5 sm:right-5">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close shopping assistant"
+                className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl bg-muted/80 text-muted-foreground shadow-sm backdrop-blur transition hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <AIProductAssistant />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

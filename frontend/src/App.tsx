@@ -26,7 +26,6 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminHomeSections from "@/pages/admin/AdminHomeSections";
 import AdminCoupons from "@/pages/admin/AdminCoupons";
-import AIChatButton from "./components/ai/AIChatButton";
 import ScrollToTop from "./components/shared/ScrollToTop";
 import TopLoadingBar from "@/components/shared/TopLoadingBar";
 import Wishlist from "@/pages/Wishlist";
@@ -51,7 +50,9 @@ function App() {
       <ScrollToTop />
       <TopLoadingBar />
       <Toaster position="top-center" />
-      <AIChatButton />
+      {/* AIChatButton intentionally NOT mounted here — it's mounted once inside MainLayout so it
+          only appears on storefront routes, not the admin panel. Mounting it here too created a
+          second, independent instance stacked on top of the storefront one (colliding popups/panels). */}
       <Routes>
         {/* Storefront — wrapped in the customer Navbar/Footer */}
         <Route element={<MainLayout />}>

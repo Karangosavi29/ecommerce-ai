@@ -12,6 +12,7 @@ interface ProductRailProps {
   emptyMessage?: string;
   /** Extra element rendered on the right of the heading, e.g. a countdown */
   headerAccessory?: React.ReactNode;
+  onViewAll?: () => void;
 }
 
 function CardSkeleton() {
@@ -36,6 +37,7 @@ export function ProductRail({
   isLoading = false,
   emptyMessage = "Nothing here yet.",
   headerAccessory,
+  onViewAll,
 }: ProductRailProps) {
   return (
     <section className="py-10 sm:py-12">
@@ -58,7 +60,10 @@ export function ProductRail({
             </h2>
             {subtitle && <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{subtitle}</p>}
           </div>
-          {headerAccessory}
+          <div className="flex items-center gap-3">
+            {headerAccessory}
+            {onViewAll && <ViewAllLink onClick={onViewAll} />}
+          </div>
         </motion.div>
 
         {isLoading ? (
@@ -99,7 +104,7 @@ export function ViewAllLink({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group inline-flex w-fit items-center gap-1.5 rounded-full py-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+      className="group inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full py-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
     >
       View all
       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

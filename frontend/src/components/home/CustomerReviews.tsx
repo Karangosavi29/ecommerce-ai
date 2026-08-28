@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Star, Quote } from "lucide-react";
+import { Star } from "lucide-react";
 import { PLACEHOLDER_REVIEWS } from "@/components/home/placeholderData";
 import { cn } from "@/lib/utils";
 
@@ -33,21 +33,23 @@ export function CustomerReviews() {
               transition={{ duration: 0.45, delay: i * 0.08 }}
               className="flex w-[85%] shrink-0 snap-start flex-col gap-3 rounded-lg border border-border bg-card p-5 shadow-soft sm:w-auto sm:shrink"
             >
-              <Quote className="h-5 w-5 text-primary/40" aria-hidden="true" />
+              <div className="flex items-center gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <Star
+                    key={idx}
+                    className={cn(
+                      "h-4 w-4",
+                      idx < review.rating ? "fill-warning text-warning" : "fill-muted text-muted"
+                    )}
+                  />
+                ))}
+              </div>
+
               <p className="text-sm leading-relaxed text-foreground">{review.comment}</p>
-              <div className="mt-auto flex items-center justify-between pt-2">
+
+              <div className="mt-auto flex flex-col pt-2">
                 <span className="text-sm font-semibold text-foreground">{review.customerName}</span>
-                <div className="flex items-center gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <Star
-                      key={idx}
-                      className={cn(
-                        "h-3.5 w-3.5",
-                        idx < review.rating ? "fill-warning text-warning" : "fill-muted text-muted"
-                      )}
-                    />
-                  ))}
-                </div>
+                <span className="text-xs text-muted-foreground">Verified Customer</span>
               </div>
             </motion.div>
           ))}
