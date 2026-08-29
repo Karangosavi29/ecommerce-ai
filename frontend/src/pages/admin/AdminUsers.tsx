@@ -26,7 +26,7 @@ export default function AdminUsers() {
         description={`${users.length} user${users.length === 1 ? "" : "s"}`}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-soft">
+      <div className="overflow-x-auto rounded-[14px] border border-border bg-card shadow-soft">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40">
             <tr>

@@ -340,7 +340,7 @@ export default function AdminProducts() {
       />
 
       {/* Products Table */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-soft">
+      <div className="overflow-x-auto rounded-[14px] border border-border bg-card shadow-soft">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40">
             <tr>
@@ -479,7 +479,7 @@ export default function AdminProducts() {
               {totalImageCount < MAX_IMAGES && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-4 text-muted-foreground transition-colors hover:border-primary"
+                  className="flex cursor-pointer flex-col items-center justify-center rounded-[14px] border-2 border-dashed border-border p-4 text-muted-foreground transition-colors hover:border-primary"
                 >
                   <ImagePlus className="h-6 w-6" />
                   <span className="mt-1 text-xs">

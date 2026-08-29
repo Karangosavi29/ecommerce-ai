@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import toast from "react-hot-toast";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { getAdminOrders, updateOrderStatus } from "@/api/admin.api";
@@ -117,7 +117,7 @@ export default function AdminOrders() {
         }
       />
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-soft">
+      <div className="overflow-x-auto rounded-[14px] border border-border bg-card shadow-soft">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40">
             <tr>
@@ -137,8 +137,8 @@ export default function AdminOrders() {
               const isExpanded = expandedOrder === orderId;
 
               return (
-                <>
-                  <tr key={orderId} className="border-b border-border last:border-0 hover:bg-accent/40">
+                <Fragment key={orderId}>
+                  <tr className="border-b border-border last:border-0 hover:bg-accent/40">
                     <td className="p-3 font-semibold text-foreground">
                       #{orderId.slice(-8).toUpperCase()}
                     </td>
@@ -218,7 +218,7 @@ export default function AdminOrders() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
 
