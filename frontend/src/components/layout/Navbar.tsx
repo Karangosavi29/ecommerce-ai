@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, LayoutDashboard, Search, Heart, Landmark, MessageCircle } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LayoutDashboard, Search, Heart, Landmark, MessageCircle, MapPin } from "lucide-react";
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
-import { buildWhatsAppUrl } from "@/config/contact";
+import { buildWhatsAppUrl, STORE_MAPS_URL } from "@/config/contact";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -203,6 +203,18 @@ export default function Navbar() {
               Chat on WhatsApp
             </a>
           )}
+
+          {STORE_MAPS_URL && (
+            <a
+              href={STORE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-medium text-primary hover:bg-accent"
+            >
+              <MapPin className="h-4 w-4" />
+              Visit our store
+            </a>
+          )}
         </div>
       </nav>
 
@@ -289,6 +301,19 @@ export default function Navbar() {
                     >
                       <MessageCircle className="h-4 w-4" />
                       Chat on WhatsApp
+                    </a>
+                  )}
+
+                  {STORE_MAPS_URL && (
+                    <a
+                      href={STORE_MAPS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary hover:bg-accent"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Visit our store
                     </a>
                   )}
 

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Smartphone, Laptop, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { STORE_ADDRESS } from "@/config/contact";
 
 interface Slide {
   id: string;
@@ -32,8 +33,8 @@ const SLIDES: Slide[] = [
     title: "We're here when you need us.",
     subtitle:
       "From choosing the right product to setup, service and support after your purchase, our team is here to help.",
-    ctaLabel: "Shop Mobiles",
-    ctaHref: "/?category=mobiles",
+    ctaLabel: STORE_ADDRESS ? "Visit Our Store" : "Shop Mobiles",
+    ctaHref: STORE_ADDRESS ? "#store" : "/?category=mobiles",
     gradient: "from-slate-800 via-slate-700 to-slate-600",
   },
   {
@@ -50,6 +51,27 @@ const SLIDES: Slide[] = [
 
 const TRUST_LINE = "Genuine products • Personal assistance • Local after-sales support";
 const AUTO_ADVANCE_MS = 6000;
+
+function CtaLink({ href, children }: { href: string; children: React.ReactNode }) {
+  if (href.startsWith("#")) {
+    return (
+      <a
+        href={href}
+        onClick={(e) => {
+          e.preventDefault();
+          if (href === "#store") {
+            window.dispatchEvent(new CustomEvent("open-store-info"));
+            return;
+          }
+          document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      >
+        {children}
+      </a>
+    );
+  }
+  return <Link to={href}>{children}</Link>;
+}
 
 function getSecondaryCta(primary: Slide) {
   return primary.ctaLabel === "Explore Products"
@@ -108,12 +130,12 @@ export function HeroBanner() {
                 <p className="mt-2 text-sm font-medium text-white/75">{TRUST_LINE}</p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <Link to={slide.ctaHref}>
+                  <CtaLink href={slide.ctaHref}>
                     <Button size="lg" className="rounded-full bg-white text-slate-900 hover:bg-white/90">
                       {slide.ctaLabel}
                     </Button>
-                  </Link>
-                  <Link to={secondaryCta.href}>
+                  </CtaLink>
+                  <CtaLink href={secondaryCta.href}>
                     <Button
                       size="lg"
                       variant="outline"
@@ -121,7 +143,7 @@ export function HeroBanner() {
                     >
                       {secondaryCta.label}
                     </Button>
-                  </Link>
+                  </CtaLink>
                 </div>
               </motion.div>
 

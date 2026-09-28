@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AIChatButton from "@/components/ai/AIChatButton";
+import { StoreVisit } from "@/components/home/StoreVisit";
 
 export default function MainLayout() {
   return (
@@ -15,6 +16,7 @@ export default function MainLayout() {
       <Footer />
 
       <AIChatButton />
+      <StoreVisit />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { CreditCard, MessageCircle, Landmark } from "lucide-react";
-import { WHATSAPP_NUMBER } from "@/config/contact";
+import { CreditCard, MessageCircle, Landmark, MapPin, Clock } from "lucide-react";
+import { WHATSAPP_NUMBER, STORE_ADDRESS, STORE_HOURS, STORE_MAPS_URL } from "@/config/contact";
 
 export default function Footer() {
   return (
@@ -14,6 +14,33 @@ export default function Footer() {
             <p className="mt-2 text-sm text-muted-foreground">
               Your trusted store for mobiles, laptops, audio and more.
             </p>
+
+            {(STORE_ADDRESS || STORE_HOURS) && (
+              <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                {STORE_ADDRESS && (
+                  <div className="flex gap-2.5">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <p>{STORE_ADDRESS}</p>
+                  </div>
+                )}
+                {STORE_HOURS && (
+                  <div className="flex gap-2.5">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <p>{STORE_HOURS}</p>
+                  </div>
+                )}
+                {STORE_MAPS_URL && (
+                  <a
+                    href={STORE_MAPS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block pl-6 font-medium text-primary hover:underline"
+                  >
+                    Get directions
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
