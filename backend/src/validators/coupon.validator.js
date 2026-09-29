@@ -20,7 +20,7 @@ const createCouponSchema = z.object({
 
 const validateBody = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
-    if (!result.success) return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+    if (!result.success) return next(new ApiError(400, result.error.issues.map((e) => e.message).join(", ")));
     req.body = result.data;
     next();
 };

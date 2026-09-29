@@ -13,14 +13,14 @@ const paginationSchema = z.object({
 
 const validateBody = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
-    if (!result.success) return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+    if (!result.success) return next(new ApiError(400, result.error.issues.map((e) => e.message).join(", ")));
     req.body = result.data;
     next();
 };
 
 const validateQuery = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.query);
-    if (!result.success) return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+    if (!result.success) return next(new ApiError(400, result.error.issues.map((e) => e.message).join(", ")));
     for (const key of Object.keys(req.query)) delete req.query[key]; 
     Object.assign(req.query, result.data);
     next();
