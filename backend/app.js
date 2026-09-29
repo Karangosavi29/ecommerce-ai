@@ -40,8 +40,20 @@ app.use(
 );
 
 // Body parsers
-app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+// The Razorpay webhook needs the raw, untouched request body to verify its
+// HMAC signature (see payment.routes.js -> rawBodyParser). express.json()
+// would otherwise parse and consume the body first, leaving nothing for the
+// route-level raw parser and breaking signature verification. Skip JSON/
+// urlencoded parsing for that one path so its own raw parser gets the bytes.
+const WEBHOOK_PATH = "/api/v1/payment/webhook";
+app.use((req, res, next) => {
+  if (req.path === WEBHOOK_PATH) return next();
+  express.json({ limit: "16kb" })(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path === WEBHOOK_PATH) return next();
+  express.urlencoded({ extended: true, limit: "16kb" })(req, res, next);
+});
 app.use(cookieParser());
 
 //  Sanitize after body parsing, before routes
