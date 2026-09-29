@@ -52,3 +52,13 @@ export const paymentLimiter = makeLimiter({
     message: "Too many payment attempts. Please try again shortly.",
     prefix: "payment",
 });
+
+// AI endpoints (OpenAI/Groq-backed): tight, cost-sensitive. Shared via Redis so the
+// limit actually holds across multiple server instances/serverless invocations,
+// unlike an in-memory counter which resets per process.
+export const aiLimiter = makeLimiter({
+    windowMs: 60 * 1000,
+    max: 15,
+    message: "Too many AI requests. Please slow down and try again in a minute.",
+    prefix: "ai",
+});
