@@ -13,9 +13,8 @@ import {
 
 const router = Router();
 
-// Raw body required for signature verification — must run before any express.json() in app.js
-// now touches this path. Remove the app-level express.raw("/api/payment/webhook", ...) from
-// app.js entirely — it's redundant/conflicting with this route-level version.
+// Raw body required for signature verification. app.js now skips express.json()/
+// urlencoded() for this exact path, so this is the only body parser that runs here.
 router.post("/webhook", rawBodyParser, razorpayWebhook);
 
 router.post(

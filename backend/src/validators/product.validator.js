@@ -27,7 +27,7 @@ const listProductsQuerySchema = z.object({
 const validateBody = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-        const fieldErrors = result.error.errors.map((e) => ({ field: e.path.join("."), message: e.message }));
+        const fieldErrors = result.error.issues.map((e) => ({ field: e.path.join("."), message: e.message }));
         return next(new ApiError(400, "Validation failed", fieldErrors));
     }
     req.body = result.data;
@@ -37,7 +37,7 @@ const validateBody = (schema) => (req, res, next) => {
 const validateQuery = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-        return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+        return next(new ApiError(400, result.error.issues.map((e) => e.message).join(", ")));
     }
     for (const key of Object.keys(req.query)) delete req.query[key];
     Object.assign(req.query, result.data);

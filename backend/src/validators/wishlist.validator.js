@@ -8,7 +8,7 @@ const addToWishlistSchema = z.object({
 export const validateAddToWishlist = (req, res, next) => {
     const result = addToWishlistSchema.safeParse(req.body);
     if (!result.success) {
-        return next(new ApiError(400, result.error.errors.map((e) => e.message).join(", ")));
+        return next(new ApiError(400, result.error.issues.map((e) => e.message).join(", ")));
     }
     req.body = result.data;
     next();

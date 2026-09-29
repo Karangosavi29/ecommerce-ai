@@ -15,7 +15,7 @@ const verifyPaymentSchema = z.object({
 const validateBody = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-        const fieldErrors = result.error.errors.map((e) => ({ field: e.path.join("."), message: e.message }));
+        const fieldErrors = result.error.issues.map((e) => ({ field: e.path.join("."), message: e.message }));
         return next(new ApiError(400, "Validation failed", fieldErrors));
     }
     req.body = result.data;
