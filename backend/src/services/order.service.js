@@ -6,6 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { addOrderConfirmationJob } from "../queues/email.queue.js";
 import { ORDER_STATUS_TRANSITIONS, CANCELLABLE_STATUSES } from "../constants/orderStatus.js";
 import couponService from "./coupon.service.js";
+import inventoryService from "./inventory.service.js";
 
 const buildWhatsAppMessage = (order) => {
   const items = order.items
@@ -45,15 +46,6 @@ ${order._id}
 
 ━━━━━━━━━━━━━━━━
 Thank you for shopping with us ❤️`;
-};
-
-const reserveStockForItems = async (items, session) => {
-    for (const item of items) {
-        const updated = await productRepository.decrementStock(item.product, item.quantity, session);
-        if (!updated) {
-            throw new ApiError(409, `"${item.name}" no longer has enough stock`);
-        }
-    }
 };
 
 const buildOrderItemsFromCart = (cart) => {
@@ -132,7 +124,7 @@ const createOrder = async (userId, userEmail, userName, { shippingAddress, order
         let order;
         try {
             await session.withTransaction(async () => {
-                await reserveStockForItems(orderItems, session);
+                await inventoryService.reserveStockForItems(orderItems, session);
                 const created = await orderRepository.create({
                     user: userId, items: orderItems, shippingAddress, orderType: "whatsapp",
                     orderStatus: "confirmed", paymentStatus: "pending", paymentMethod: resolvedPaymentMethod,
